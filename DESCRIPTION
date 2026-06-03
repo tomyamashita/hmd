@@ -1,0 +1,32 @@
+Package: hmd
+Type: Package
+Title: Process Human Mobility Data for Use in Wildlife Research
+Version: 0.0.0.1
+Authors@R: c(person(given = "Thomas J.", family = "Yamashita", 
+                    role = c("aut", "cre"), 
+                    email = "tjyamashta@gmail.com", 
+                    comment = c(ORCID = "0000-0002-0213-6310"))
+            )
+Maintainer: Thomas J. Yamashita <tjyamashta@gmail.com>
+Description: This package was made to hold functions created by me to process human mobility data. 
+    It likely does not translate well to HMD from other sources and all functions are likely to be buggy. 
+License: GPL (>= 3)
+url: https://github.com/tomyamashita/hmd
+BugReports: https://github.com/tomyamashita/hmd/issues
+Encoding: UTF-8
+LazyData: true
+Requires: 
+  R (>= 4.5.0)
+Imports: 
+    bit64 (>= 4.8.0),
+    collapse (>= 2.1.6),
+    data.table (>= 1.18.4),
+    fs (>= 2.1.0),
+    lubridate (>= 1.9.5),
+    parallel (>= 4.5.3),
+    pbapply (>= 1.7.4),
+    sf (>= 1.1.1),
+    units (>= 1.0.1)
+Suggests: 
+    ggplot2
+Config/roxygen2/version: 8.0.0
