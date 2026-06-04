@@ -848,12 +848,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
     n <- sub("_gpkg", "", substitute(x))
     ## NEED TO ADD A TRYCATCH SO IT NOTIFIES AND SKIPS ERRORS FOR NOW
     x1 <- do.call(rbind, lapply(tiles_sel, function(y){
-      tryCatch(sf::st_read(x, layer = y, quiet = TRUE),
-               error = function(e){
-                 message(y, " failed. Skipping.")
-                 return(NULL)
-               })
-      sf::st_read(x, layer = y, quiet = TRUE)
+      tryCatch(sf::st_read(x, layer = y, quiet = TRUE), error = function(e){message(y, " failed. Skipping."); return(NULL)})
     }))
     x2 <- sf::st_transform(x1, crs = coord.sys)
     colnames(x2)[-ncol(x2)] <- paste(colnames(x2)[-ncol(x2)], "_", n, sep = "")
