@@ -1,7 +1,7 @@
 Package: hmd
 Type: Package
 Title: Process Human Mobility Data for Use in Wildlife Research
-Version: 0.0.0.1
+Version: 0.0.0.2
 Authors@R: c(person(given = "Thomas J.", family = "Yamashita", 
                     role = c("aut", "cre"), 
                     email = "tjyamashta@gmail.com", 

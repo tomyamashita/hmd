@@ -1,3 +1,5 @@
+# hmd (development version)
+
 # hmd2 (development version)
 
 ## hmd2 Package Changelog
@@ -9,4 +11,8 @@
 * Created documentation using roxygen2
 * Added package dependencies
 * Initial upload to github
+
+### Version 0.0.0.1 (2026-06-04)
+* Minor update to classifyHMD()
+
 
