@@ -1,9 +1,9 @@
-# hmd2
+# hmd
 
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of hmd2 is to provide easy access to the functions I created for working with human mobility data (HMD) and provide greater consistency across devices. 
+The goal of hmd is to provide easy access to the functions I created for working with human mobility data (HMD) and provide greater consistency across devices. 
 
 
 ## Installation
