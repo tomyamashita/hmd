@@ -1309,6 +1309,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
 ##' @param idcol character. Column name of the column storing a unique user id
 ##'
 ##' @details This function is modified from \code{\link{amt::make_track}} which utilizes \code{\link{amt::step_lengths}}, \code{\link{amt::direction_rel}}, and \code{\link{amt::speed}}.
+##' If this function is run multiple times on a dataset, such as after running \code{\link{thinHMD}}, it will replace movement metrics each time.
 ##'
 ##' @return The original ds with movement metrics added. Adds speed_kmh, stepl_m, difft_sec, ta
 ##'
@@ -1333,12 +1334,11 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
 ##' ## No example right now
 ##' }
 trackFun <- function(ds, xcol = "X", ycol = "Y", dtcol = "ts_UTC", idcol = "grid"){
-  #ds <- hmd.class3
+  #ds <- dt.thinned
   #xcol <- "X"
   #ycol <- "Y"
   #dtcol <- "ts_UTC"
   #idcol <- "grid"
-  #thin <- 0
 
   ds$OID <- 1:nrow(ds)
 
@@ -1412,10 +1412,18 @@ trackFun <- function(ds, xcol = "X", ycol = "Y", dtcol = "ts_UTC", idcol = "grid
   out6[,`:=` (difft_sec = units::set_units(difft_sec, "sec"),
               stepl_m = units::set_units(stepl_m, "m"),
               speed_kmh = units::set_units(speed_kmh, "km/h"))]
-  #out6[1:5,]
+  out6[1:5,]
 
   # Merge with full data
-  out7 <- cbind(ds[out6$OID,], out6[,-1])
+  ## Replace movement metrics instead of add extra movement metric columns
+  if(all(colnames(out6) %in% colnames(ds))){
+    ds.out <- ds[,c(colnames(out6)) := NULL]
+    ds.out <- ds.out[out6$OID,]
+  }else{
+    ds.out <- ds[out6$OID,]
+  }
+
+  out7 <- cbind(ds.out, out6[,-1])
   out7[1:5,]
 
   # tortuosity = (total distance) / (cumulative distance)

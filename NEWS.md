@@ -14,5 +14,5 @@
 
 ### Version 0.0.0.1 (2026-06-04)
 * Minor update to classifyHMD()
-
+* Update to trackFun() to replace movement metrics each time (instead of adding columns)
 
