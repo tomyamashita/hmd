@@ -24,7 +24,7 @@ Imports:
     fs (>= 2.1.0),
     geojsonsf (>= 2.0.5),
     lubridate (>= 1.9.5),
-    matrixStats (>= 1.5.0)
+    matrixStats (>= 1.5.0),
     parallel (>= 4.5.3),
     pbapply (>= 1.7.4),
     quadkeyr (>= 0.1.0),
@@ -37,4 +37,3 @@ Imports:
 Suggests: 
     ggplot2
 Config/roxygen2/version: 8.0.0
-RoxygenNote: 7.3.3

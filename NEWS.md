@@ -15,4 +15,5 @@
 
 ### Version 0.0.0.3 (2026-06-05)
 * Added new function createBldgTiles() to download building tiles from Microsoft's planetary computer
+* Fixed syntax error in DESCRIPTION file
 
