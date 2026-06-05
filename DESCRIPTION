@@ -1,7 +1,7 @@
 Package: hmd
 Type: Package
 Title: Process Human Mobility Data for Use in Wildlife Research
-Version: 0.0.0.2
+Version: 0.0.0.3
 Authors@R: c(person(given = "Thomas J.", family = "Yamashita", 
                     role = c("aut", "cre"), 
                     email = "tjyamashta@gmail.com", 
@@ -22,11 +22,19 @@ Imports:
     collapse (>= 2.1.6),
     data.table (>= 1.18.4),
     fs (>= 2.1.0),
+    geojsonsf (>= 2.0.5),
     lubridate (>= 1.9.5),
+    matrixStats (>= 1.5.0)
     parallel (>= 4.5.3),
     pbapply (>= 1.7.4),
+    quadkeyr (>= 0.1.0),
+    readr (>= 2.2.0),
     sf (>= 1.1.1),
+    suncalc (>= 0.5.1),
+    terra (>= 1.8-93),
+    tidyr (>= 1.3.2),
     units (>= 1.0.1)
 Suggests: 
     ggplot2
 Config/roxygen2/version: 8.0.0
+RoxygenNote: 7.3.3
