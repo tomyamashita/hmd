@@ -11,7 +11,7 @@
 ### thinHMD()
 
 
-################################################################################
+#-------------------------------------------------------------------------------
 
 # Flag assignment function (added 2026-05-15) ####
 ##' @description Convert integer objects in Raw HMD data to readable numeric and character vectors and assign and name flags.
@@ -203,7 +203,7 @@ flagAssignment <- function(in.dir, out.dir, move.file = TRUE, pp = FALSE, cores.
 }
 
 
-################################################################################
+#-------------------------------------------------------------------------------
 
 # Flag removal function (added 2026-05-15) ####
 ##' @description Remove locations containing bad data, locations with inaccurate fixes, or unreasonable movements
@@ -233,7 +233,7 @@ flagAssignment <- function(in.dir, out.dir, move.file = TRUE, pp = FALSE, cores.
 ##' and 5 = High accuracy (high accuracy flag (0 - 35 m)).
 ##'
 ##' Methods for cleaning data: Many options are currently implemented for cleaning data depending on how conservative you need the data to be:
-##' none: Only bad flags and duplicates will be removed.
+##' none: (Default) Only bad flags and duplicates will be removed.
 ##' all: Keeps all cleaning methods. Should only be used to compare the results of the various cleaning methods.
 ##' BaseHigh: Heather's original cleaning method which only removed high speeds (>190 km/h ~ > 120 mph) from suspect flags
 ##' BaseMed: A modification of the BaseHigh method removing lower speed locations (> 130 km/h ~ 80 mph) from suspect flags
@@ -433,7 +433,7 @@ flagRemoval <- function(in.dir, out.dir, FF.remove = NULL, FF.suspect = NULL, me
 
     # Sort data by unique user (grid) and timestamp
     message("Loaded data and removed duplicates and bad flags from ", name, ". Sorting and calculating movement parameters...")
-    f3 <- f2[order(order(grid,timestamp_POSIXct.UTC)),]
+    f3 <- f2[order(grid,timestamp_POSIXct.UTC),]
 
     # Day in local time
     f3[,c("day") := lubridate::as_date(timestamp_POSIXct.local)]
@@ -446,19 +446,19 @@ flagRemoval <- function(in.dir, out.dir, FF.remove = NULL, FF.suspect = NULL, me
     f3[,(cols.shift2) := data.table::shift(.SD, n = -1, type = "lag"), .SDcols = cols.shift1]
 
     # Calculate time between fixes
-    f3[,("difft_sec") := ifelse(grid == temp_grid, difftime(temp_timestamp_POSIXct.UTC, timestamp_POSIXct.UTC), NA)]
+    f3[,("difft_sec") := ifelse(grid == temp_grid, difftime(temp_timestamp_POSIXct.UTC, timestamp_POSIXct.UTC, units = "secs"), NA)]
 
     # Calculate step length
     f3[,("stepl_m") := ifelse(grid == temp_grid, geosphere::distHaversine(p1 = f3[,c("longitude", "latitude")], p2 = f3[,c("temp_longitude", "temp_latitude")]), NA)]
 
     # Calculate speed
     ## In km per hour
-    f3[,("speed_kmh") := stepl_m/difft_sec * (60*60)/1000]
+    f3[,("speed_kmh") := stepl_m/difft_sec * (60*60)/1000]  # Multiply m/s by 3.6
     ## In miles per hour
     f3[,("speed_mph") := speed_kmh * 0.6214]
 
     # Calculate direction
-    f3[,("bearing") := ifelse(grid == temp_grid, geosphere::bearing(f3[,c("temp_longitude", "temp_latitude")], f3[,c("longitude", "latitude")]), NA)]
+    f3[,("bearing") := ifelse(grid == temp_grid, geosphere::bearing(p1 = f3[,c("longitude", "latitude")], p2 = f3[,c("temp_longitude", "temp_latitude")]), NA)]
     #f3[1:5,]
 
     # Calculate number of points per day
@@ -562,7 +562,7 @@ flagRemoval <- function(in.dir, out.dir, FF.remove = NULL, FF.suspect = NULL, me
 }
 
 
-################################################################################
+#-------------------------------------------------------------------------------
 
 # Calculate Spatial HMD metrics (Added 2026-05-15) ####
 ##' @description Calculate spatial and track-level metrics from HMD data
@@ -1295,7 +1295,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
 }
 
 
-################################################################################
+#-------------------------------------------------------------------------------
 
 # Calculate track-level metrics for HMD ####
 ##' @description Calculate movement metrics (speed, step length, and time between points) for each track
@@ -1437,7 +1437,7 @@ trackFun <- function(ds, xcol = "X", ycol = "Y", dtcol = "ts_UTC", idcol = "grid
 }
 
 
-################################################################################
+#-------------------------------------------------------------------------------
 
 # Calculate distance to nearest feature (added 2026-05-28) ####
 ##' @description Simplified calculation of distance to nearest feature while maintaining structure of nearest feature data
@@ -1479,7 +1479,7 @@ distToFeature <- function(x, n, feature){
 }
 
 
-################################################################################
+#-------------------------------------------------------------------------------
 
 # Convert flagged data back to raw (added 2026-06-03) ####
 ##' @description Convert flagged data back to raw (a reverse of flagAssignment)
@@ -1526,7 +1526,7 @@ flaggedToRaw <- function(in.dir, out.dir){
 }
 
 
-################################################################################
+#-------------------------------------------------------------------------------
 
 # Split a combined HMD file by month (added 2026-06-03) ####
 ##' @description Split a combined HMD file by month
@@ -1588,7 +1588,7 @@ splitByMonth <- function(in.dir, out.dir, time.col = "timestamp_POSIXct.UTC", na
 }
 
 
-################################################################################
+#-------------------------------------------------------------------------------
 
 # Resample locations to thin fixes based on a time interval (added 2026-06-03) ####
 ##' @description Resample HMD locations to remove locations that are too close in time
@@ -1694,6 +1694,6 @@ thinHMD <- function(x, idcol, dtcol, rate = lubridate::seconds(30), tolerance = 
 }
 
 
-################################################################################
+#-------------------------------------------------------------------------------
 
 

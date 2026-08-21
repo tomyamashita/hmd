@@ -8,7 +8,7 @@ The goal of hmd is to provide easy access to the functions I created for working
 
 ## Installation
 
-You can install the development version of hmd2 like so:
+You can install the development version of hmd like so:
 
 ``` r
 if(!require(remotes)){install.packages("remotes")}
@@ -20,7 +20,7 @@ remotes::install_github("https://github.com/tomyamashita/hmd")
 This is a basic example which shows you how to solve a common problem:
 
 ``` r
-library(hmd2)
+library(hmd)
 ## basic example code
 ## No examples exist right now...
 ```

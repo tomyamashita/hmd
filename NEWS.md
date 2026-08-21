@@ -17,3 +17,7 @@
 * Added new function createBldgTiles() to download building tiles from Microsoft's planetary computer
 * Fixed syntax error in DESCRIPTION file
 
+### Version 0.0.0.4 (2026-08-21)
+* Updated documentation and script formatting
+* Fixed bugs in flagRemoval() related to data.table conversion of functions
+
