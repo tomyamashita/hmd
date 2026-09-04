@@ -25,4 +25,5 @@
 * Modified trackFun to calculate non-movements as having a turn angle of 0
 * Slight other improvements to trackFun
 * Updated trackFun documentation to reflect changes
+* Updated classifyHMD to incorporate changes to trackFun
 

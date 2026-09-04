@@ -1251,8 +1251,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
 
       # Create track metrics (speed, turn angle, etc.)
       message("All spatial metrics calculated. Calculating track-level metrics...")
-      h9 <- trackFun(ds = h8, xcol = "X", ycol = "Y", dtcol = "ts_UTC", idcol = "grid", thin = NULL)
-
+      h9 <- trackFun(ds = h8, xcol = "X", ycol = "Y", dtcol = "ts_UTC", idcol = "grid")
 
       # Save the distance calculations
       message("Track metrics calculated at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ". Cleaning up and saving output...")
