@@ -18,13 +18,16 @@ trackFun(ds, xcol = "X", ycol = "Y", dtcol = "ts_UTC", idcol = "grid")
 \item{idcol}{character. Column name of the column storing a unique user id}
 }
 \value{
-The original ds with movement metrics added. Adds speed_kmh, stepl_m, difft_sec, ta
+The original ds with movement metrics added. Adds difft_sec, stepl_m, speed_mps, speed_kmh, direction, and ta.
+Direction of travel assigns Eastward movements to 0.
 }
 \description{
 Calculate movement metrics (speed, step length, and time between points) for each track
 }
 \details{
 This function is modified from \code{\link{amt::make_track}} which utilizes \code{\link{amt::step_lengths}}, \code{\link{amt::direction_rel}}, and \code{\link{amt::speed}}.
+If this function is run multiple times on a dataset, such as after running \code{\link{thinHMD}}, it will replace movement metrics each time.
+All calculations are made forward (e.g., between fix 1 and fix 2)
 }
 \section{{Disclaimer}}{
 

@@ -21,3 +21,8 @@
 * Updated documentation and script formatting
 * Fixed bugs in flagRemoval() related to data.table conversion of functions
 
+### Version 0.0.0.5 (2026-09-04)
+* Modified trackFun to calculate non-movements as having a turn angle of 0
+* Slight other improvements to trackFun
+* Updated trackFun documentation to reflect changes
+

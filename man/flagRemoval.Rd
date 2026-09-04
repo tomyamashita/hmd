@@ -55,7 +55,7 @@ Accuracy is assigned a number from 0-5 where
 and 5 = High accuracy (high accuracy flag (0 - 35 m)).
 
 Methods for cleaning data: Many options are currently implemented for cleaning data depending on how conservative you need the data to be:
-none: Only bad flags and duplicates will be removed.
+none: (Default) Only bad flags and duplicates will be removed.
 all: Keeps all cleaning methods. Should only be used to compare the results of the various cleaning methods.
 BaseHigh: Heather's original cleaning method which only removed high speeds (>190 km/h ~ > 120 mph) from suspect flags
 BaseMed: A modification of the BaseHigh method removing lower speed locations (> 130 km/h ~ 80 mph) from suspect flags

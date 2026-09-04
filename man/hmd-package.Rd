@@ -11,7 +11,7 @@ This package was made to hold functions created by me to process human mobility 
 \seealso{
 Useful links:
 \itemize{
-  \item Report bugs at \url{https://github.com/tomyamashita/hmd2/issues}
+  \item Report bugs at \url{https://github.com/tomyamashita/hmd/issues}
 }
 
 }

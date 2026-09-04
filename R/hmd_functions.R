@@ -1310,8 +1310,10 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
 ##'
 ##' @details This function is modified from \code{\link{amt::make_track}} which utilizes \code{\link{amt::step_lengths}}, \code{\link{amt::direction_rel}}, and \code{\link{amt::speed}}.
 ##' If this function is run multiple times on a dataset, such as after running \code{\link{thinHMD}}, it will replace movement metrics each time.
+##' All calculations are made forward (e.g., between fix 1 and fix 2)
 ##'
-##' @return The original ds with movement metrics added. Adds speed_kmh, stepl_m, difft_sec, ta
+##' @return The original ds with movement metrics added. Adds difft_sec, stepl_m, speed_mps, speed_kmh, direction, and ta.
+##' Direction of travel assigns Eastward movements to 0.
 ##'
 ##' @references \code{\link{amt::amt}} \code{\link{amt::make_track}}
 ##'
@@ -1321,7 +1323,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
 ##'
 ##' @importFrom sf st_drop_geometry
 ##' @importFrom collapse roworder
-##' @importFrom data.table data.table shift
+##' @importFrom data.table data.table shift cbindlist
 ##' @importFrom units set_units
 ##'
 ##' @keywords manip
@@ -1359,7 +1361,7 @@ trackFun <- function(ds, xcol = "X", ycol = "Y", dtcol = "ts_UTC", idcol = "grid
 
   ds3 <- collapse::roworder(ds2, id, dt)
   #ds3[1:5,]
-  o <- ds3$OID
+  #o <- ds3$OID
 
   # Convert to steps
   out1 <- lapply(cols, function(x){
@@ -1375,65 +1377,63 @@ trackFun <- function(ds, xcol = "X", ycol = "Y", dtcol = "ts_UTC", idcol = "grid
     rm(x1, x2)
     #rm(x)
   })
-  out2 <- do.call(cbind, out1)
+  out2 <- data.table::cbindlist(out1)
   out2[1:5,]
 
   # Calculate difference in X, Y, and dt
-  out3 <- lapply(cols[2:4], function(x){
-    x1 <- data.frame(ifelse(out2$id__same, out2[[paste(x, 2, sep = "__")]] - out2[[paste(x, 1, sep = "__")]], NA))
-    colnames(x1) <- paste(x, "diff", sep = "__")
-    return(x1)
-    rm(x1)
-    #rm(x)
-  })
-  out4 <- data.table::data.table(out2, do.call(cbind, out3))
-  out4[1:5,]
-
+  out2[,paste(cols[2:4], "diff", sep = "__") := lapply(cols[2:4], function(x){
+    ifelse(id__same, out2[[paste(x, 2, sep = "__")]] - out2[[paste(x, 1, sep = "__")]], NA)
+  })]
+  out2
 
   # Calculate step length and speed
-  out4[,`:=` (stepl_m = ifelse(id__same, sqrt(X__diff^2 + Y__diff^2), NA))]
-  out4[,`:=` (speed_kmh = ifelse(id__same, stepl_m/dt__diff * 3.6, NA))]
+  out2[,`:=` (stepl_m = ifelse(id__same, sqrt(X__diff^2 + Y__diff^2), NA))]
+  out2[,`:=` (speed_mps = ifelse(id__same, stepl_m/dt__diff, NA))]
+  out2[,`:=` (speed_kmh = speed_mps * 3.6)]
+  out2
 
-  # Calculate direction and turn angle
-  a <- atan2(y = out4$Y__diff, x = out4$X__diff)
-  a[out4$X__diff == 0 & out4$Y__diff == 0] <- NA
+  # Calculate direction of travel with East = 0, South 90, West 180, and North 270
+  a <- out2[,atan2(y = Y__diff, x = X__diff)]
   a <- ifelse(a < 0, 2 * pi + a, a)
-  #a[1:10]
 
-  p <- c(NA, diff(a))
+  # Calculate turn angle (difference between two directions)
+  p <- c(diff(a), NA)
 
-  out4[,`:=` (direction = a,
+  # Add direction of travel and turn angle
+  out2[,`:=` (direction = a,
               ta = ifelse(id__same, p, NA))]
-  #out4[1:5,]
+  out2
 
   # Clean up output
-  out6 <- out4[,c("OID__1", "id__same", "dt__diff", "stepl_m", "speed_kmh", "direction", "ta")]
-  colnames(out6) <- c("OID", "same_gridday", "difft_sec", "stepl_m", "speed_kmh", "direction", "ta")
-  out6[,`:=` (difft_sec = units::set_units(difft_sec, "sec"),
-              stepl_m = units::set_units(stepl_m, "m"),
-              speed_kmh = units::set_units(speed_kmh, "km/h"))]
-  out6[1:5,]
+  out3 <- out2[,c("OID__1", "id__same", "dt__diff", "stepl_m", "speed_mps", "speed_kmh", "direction", "ta")]
+  colnames(out3) <- c("OID", "same_grid", "difft_sec", "stepl_m", "speed_mps", "speed_kmh", "direction", "ta")
+  out3[, `:=` (difft_sec = units::set_units(difft_sec, "sec"),
+               stepl_m = units::set_units(stepl_m, "m"),
+               speed_mps = units::set_units(speed_mps, "m/s"),
+               speed_kmh = units::set_units(speed_kmh, "km/h"))]
+  out3
 
   # Merge with full data
   ## Replace movement metrics instead of add extra movement metric columns
-  if(all(colnames(out6) %in% colnames(ds))){
-    ds.out <- ds[,c(colnames(out6)) := NULL]
-    ds.out <- ds.out[out6$OID,]
+  if(all(colnames(out3) %in% colnames(ds))){
+    ds.out <- ds[,c(colnames(out3)) := NULL]
+    ds.out <- ds.out[out3$OID,]
   }else{
-    ds.out <- ds[out6$OID,]
+    ds.out <- ds[out3$OID,]
   }
 
-  out7 <- cbind(ds.out, out6[,-1])
-  out7[1:5,]
+  ## Combine new movement metrics with original dataset
+  out4 <- cbind(ds.out, out3[,-1])
+  out4[1:5,]
 
-  # tortuosity = (total distance) / (cumulative distance)
+  # (tortuosity) = (total distance) / (cumulative distance)
   # (total distance) = (euclidean distance between first and last points)
   # (cumulative distance) = sum(step lengths)
   # (summarize sampling rate) = data.frame(summary(difft_sec), sd = sd(difft_sec), n = length(difft_sec), unit = "sec")
 
-  return(out7)
-  rm(ds2, ds3, o, out1, out2, out3, out4, a, p, out6, out7)
-  #rm(ds, xcol, ycol, dtcol, idcol, thin)
+  return(out4)
+  rm(ds2, ds3, o, out1, out2, out3, out4, a, p)
+  #rm(ds, xcol, ycol, dtcol, idcol)
 }
 
 
