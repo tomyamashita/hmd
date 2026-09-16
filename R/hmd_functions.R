@@ -66,6 +66,9 @@ flagAssignment <- function(in.dir, out.dir, move.file = TRUE, pp = FALSE, cores.
   #pp <- TRUE                                      # Should parallel processing be enabled?
   #cores.left <- 20                                 # How many processing cores should be reserved for additional use. Suggest leaving at least 1.
 
+  # FUNCTION START #
+  message("This function started at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
+
   # Initial file path checks
   if(!fs::dir_exists(in.dir)){
     stop("Your in directory does not exist. The inputted file path was ", in.dir)
@@ -218,6 +221,9 @@ flagAssignment <- function(in.dir, out.dir, move.file = TRUE, pp = FALSE, cores.
   if(pp == TRUE){
     parallel::stopCluster(cl1)
   }
+
+  # FUNCTION END #
+  message("This function completed at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
 
   # Close the function
   return(out1)
@@ -578,6 +584,9 @@ flagRemoval <- function(in.dir, out.dir, FF.remove = NULL, FF.suspect = NULL, me
     parallel::stopCluster(cl1)
   }
 
+  # FUNCTION END #
+  message("This function completed at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
+
   # Close function
   return(out2)
   rm(files.flagged, FF.all, FF.suspect, FF.remove, out2, cl1)
@@ -599,13 +608,18 @@ flagRemoval <- function(in.dir, out.dir, FF.remove = NULL, FF.suspect = NULL, me
 ##' If a geographic coordinate system is used (e.g., WGS84 or NAD83), this will default to epsg:3857.
 ##' @param data.dir character. Directory where the geopackage and raster layers are stored.
 ##' See details for important information about the structure of this directory
-##' @param ths list. Distance thresholds for main roads (main), railroads (rail), buildings (bldg), local roads (local), and trails (trail).
+##' @param ths list. Distance thresholds for main roads (main), railroads (railr), buildings (bldg), local roads (local), and trails (trail).
 ##' If not all names are provided, this function will exclude those from determining hmd.type.
 ##' @param road.source character. The source data to use for local roads and trail data.
 ##' This should be any of ("NTD", "USFS").
 ##' If both are provided, then the function will use the nearest of the two to determine distance to local roads/trails.
 ##' @param snowfraction numeric between 0 and 100. What percentage of snow cover in a cell is required to assign a point as having snow.
 ##' @param add.calcs logical. Should the additional, non-distance calculations be included? See details for which calculations are included
+##' @param prep.data logical. Has the spatial data already been created and saved using save.gpkg? If so, the function will look for data in gpkg.folder instead of creating it.
+##' @param save.gpkg logical. Should the spatial data used in the calculations be saved to a geopackage file?
+##' @param gpkg.folder character. The name of the output folder where items should be saved. Only relevant if save.gpkg = TRUE or prep.data = TRUE.
+##' Inside this folder, 3 files will be created: studyarea_tiled_data.gpkg will contain all vector data, studyarea_tiled_DEM.tiff will contain elevation-related data, and studyarea_tiled_snow.tiff will contain daily snow cover data.
+##' This function will create a folder if the named folder does not exist
 ##' @inheritParams flagAssignment pp cores.left
 ##'
 ##' @details This function uses a previously downloaded data directory containing spatial data and calculates distance to features and possibly additional spatial data associated with HMD.
@@ -644,7 +658,7 @@ flagRemoval <- function(in.dir, out.dir, FF.remove = NULL, FF.suspect = NULL, me
 ##' @examples \dontrun{
 ##' ## No example right now
 ##' }
-classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, road.source, snowfraction = 50, add.calcs = TRUE, pp = FALSE, cores.left = NULL){
+classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, road.source, snowfraction = 50, add.calcs = TRUE, prep.data = FALSE, save.gpkg = FALSE, gpkg.folder = NULL, pp = FALSE, cores.left = NULL){
   #in.dir <- file.path(getwd(), "test_data", "cleaned")               # Directory containing cleaned HMD data
   #out.dir <- file.path(getwd(), "test_data", "classify")            # Directory containing classified HMD data and where files will be saved
   #studyarea <- file.path("E:","HMD", "Wolverines", "RecClass_test", "data_spatial", "Flathead_NF.shp")     # Define a study area for filtering points and road features. This can be a file path, sf object, or SpatVector object. Will be converted to a sf object
@@ -658,79 +672,35 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
   #cores.left <- NULL                                                     # If so, how many cores should we reserve
 
 
-  ##############################################################################
+  #-----------------------------------------------------------------------------
 
   # Check that necessary files exist
   ## geopackage files in the directory
   gpkg_files <- fs::dir_ls(data.dir, type = "file", glob = "*.gpkg$", recurse = FALSE)
   ## raster folders in the directory
   rast_files <- fs::dir_ls(data.dir, type = "directory", recurse = FALSE)
-  ## general geopackage
-  if(!any(grepl("general", gpkg_files))){
-    stop("The general geopackage does not exist in the data directory. This is required.")
-  }else{
-    gen_gpkg <- gpkg_files[grep("general", gpkg_files)]
-  }
-  ## Main roads
-  if(!any(grepl("NTD_mainroads", gpkg_files))){
-    stop("The main roads geopackage does not exist in the data directory. This is required.")
-  }else{
-    main_gpkg <- gpkg_files[grep("NTD_mainroads", gpkg_files)]
-  }
-  ## NTD local roads
-  if(!any(grepl("NTD_localroads", gpkg_files))){
-    stop("The NTD local roads geopackage does not exist in the data directory. This is required.")
-  }else{
-    ntd_local_gpkg <- gpkg_files[grep("NTD_localroads", gpkg_files)]
-  }
-  ## NTD trails
-  if(!any(grepl("NTD_trails", gpkg_files))){
-    stop("The NTD trails geopackage does not exist in the data directory. This is required.")
-  }else{
-    ntd_trail_gpkg <- gpkg_files[grep("NTD_trails", gpkg_files)]
-  }
-  ## NTD railroads
-  if(!any(grepl("NTD_railroads", gpkg_files))){
-    stop("The NTD railroads geopackage does not exist in the data directory. This is required.")
-  }else{
-    rail_gpkg <- gpkg_files[grep("NTD_railroads", gpkg_files)]
-  }
-  ## USFS local roads
-  if(!any(grepl("USFS_localroads", gpkg_files))){
-    stop("The USFS local roads geopackage does not exist in the data directory. This is required.")
-  }else{
-    usfs_local_gpkg <- gpkg_files[grep("USFS_localroads", gpkg_files)]
-  }
-  ## USFS trails
-  if(!any(grepl("USFS_trails", gpkg_files))){
-    stop("The USFS trails geopackage does not exist in the data directory. This is required.")
-  }else{
-    usfs_trails_gpkg <- gpkg_files[grep("USFS_trails", gpkg_files)]
-  }
-  ## Microsoft buildings
-  if(!any(grepl("MS_buildings", gpkg_files))){
-    stop("The buildings geopackage does not exist in the data directory. This is required.")
-  }else{
-    bldg_gpkg <- gpkg_files[grep("MS_buildings", gpkg_files)]
-  }
-  ## Waterbodies
-  if(!any(grepl("USGS_waterbodies", gpkg_files))){
-    stop("The waterbodies geopackage does not exist in the data directory. This is required.")
-  }else{
-    water_gpkg <- gpkg_files[grep("USGS_waterbodies", gpkg_files)]
-  }
-  ## DEM elevation data
-  if(!any(grepl("USGS_DEM", rast_files))){
-    stop("The DEM folder does not exist in the data directory. This is required.")
-  }else{
-    dem_dir <- rast_files[grep("USGS_DEM", rast_files)]
-  }
-  ## Snow cover data
-  if(!any(grepl("NSIDC_SnowCover", rast_files))){
-    stop("The Snow Cover folder does not exist in the data directory. This is required.")
-  }else{
-    snow_dir <- rast_files[grep("NSIDC_SnowCover", rast_files)]
-  }
+
+  ## Geopackages
+  gpkgs.n <- c("general", "NTD_mainroads", "NTD_localroads", "NTD_trails", "NTD_railroads", "USFS_localroads", "USFS_trails", "MS_buildings", "USGS_waterbodies")
+  gpkgs <- lapply(gpkgs.n,
+                  function(x){
+                    if(!any(grepl(x, gpkg_files))){
+                      stop("The ", x, "geopackage does not exist in the data directory. This is required.")
+                    }else{
+                      gpkg_files[grep(x, gpkg_files)]
+                    }
+                  })
+  names(gpkgs) <- gpkgs.n
+  ## Rasters
+  rasts.n <- c("USGS_DEM", "NSIDC_SnowCover")
+  rasts <- lapply(rasts.n, function(x){
+    if(!any(grepl(x, rast_files))){
+      stop("The ", x, "raster folder does not exist in the data directory. This is required.")
+    }else{
+      rast_files[grep(x, rast_files)]
+    }
+  })
+  names(rasts) <- rasts.n
 
   # Check that HMD data directories exist
   if(!all(c(fs::dir_exists(in.dir), fs::dir_exists(out.dir)))){
@@ -750,43 +720,17 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
   }
 
   # Check which distance calculations will be done
-  ## Building calculation
-  if(any(grepl("bldg", names(ths)))){
-    bldg.th <- ths[["bldg"]]
-  }else{
-    message("No building threshold found. Will calculate distance to buildings but not include it in classification.")
-    bldg.th <- NULL
-  }
-  ## Main roads calculation
-  if(any(grepl("Rmain", names(ths)))){
-    main.th <- ths[["Rmain"]]
-  }else{
-    message("No main road threshold found. Will calculate distance to main roads but not include it in classification.")
-    main.th <- NULL
-  }
-  ## Local roads calculation
-  if(any(grepl("Rlocal", names(ths)))){
-    local.th <- ths[["Rlocal"]]
-  }else{
-    message("No local road threshold found. Will calculate distance to local roads but not include it in classification.")
-    local.th <- NULL
-  }
-  ## Railroad calculation
-  if(any(grepl("rail", names(ths)))){
-    rail.th <- ths[["rail"]]
-  }else{
-    message("No railroad threshold found. Will calculate distance to railroads but not include it in classification.")
-    rail.th <- NULL
-  }
-  ## Trails calculation
-  if(any(grepl("trail", names(ths)))){
-    trail.th <- ths[["trail"]]
-  }else{
-    message("No trail threshold found. Will calculate distance to trails but not include it in classification.")
-    trail.th <- NULL
-  }
-
-  thresholds <- lapply(list(bldg = bldg.th, main = main.th, rail = rail.th, local = local.th, trail = trail.th), units::as_units, "meter")
+  th.types <- c("bldg", "main", "railr", "local", "trail")
+  thresholds <- lapply(th.types, function(x){
+    if(any(grepl(x, names(ths)))){
+      units::as_units(ths[[x]], "meter")
+      #assign(paste(x, "th", sep = "."), ths[[x]])
+    }else{
+      message("No ", x, " threshold found. Will calculate distance to ", x, " but not include it in classification.")
+      units::as_units(NULL, "meter")
+    }
+  })
+  names(thresholds) <- th.types
   message("Function will use ", paste(names(thresholds)[!sapply(thresholds,is.null)], collapse = ", "), " to classify HMD.")
 
   # Check what the source of the road data should be
@@ -818,154 +762,233 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
   message("Initial data checking complete. Loading and projecting spatial data...")
 
 
-  ##############################################################################
+  #-----------------------------------------------------------------------------
 
-  # Identify which tiles are included in the study area
-  ## Make sure the study area is an sf object
-  if(studyarea == "HMD"){
-    message("Using the first file in the cleaned HMD folder to define the study area. \nThis can have unintended consequences if HMD comes from multiple areas...")
-    temp1 <- readRDS(hmd.clean.files[1])
-    temp2 <- sf::st_as_sf(temp1, coords = c("longitude", "latitude"), crs = "epsg:4326")
-    sa <- sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(temp2)))
-  }else if(class(studyarea)[1] == "character"){
-    message("Reading study area from file...")
-    sa <- sf::st_read(studyarea, quiet = TRUE)
-  }else if(class(studyarea)[1] == "SpatVector"){
-    message("Converting study area from terra vector to sf...")
-    sa <- sf::st_as_sf(sa)
-  }else if(class(studyarea)[1] == "sf"){
-    message("Study area is already an sf object. No conversion needed")
-    sa <- studyarea
+  # Check if spatial data prep has already been completed
+  if(prep.data){
+    # Load in vector data
+    sa <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "sa")
+    sa_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "sa_prj")
+    bbox <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "bbox")
+    bbox_buffer <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "bbox_buffer")
+    main_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "main_prj")
+    ntd_local_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "ntd_local_prj")
+    ntd_trails_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "ntd_trails_prj")
+    usfs_local_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "usfs_local_prj")
+    usfs_trails_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "usfs_trails_prj")
+    rail_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "railroad_prj")
+    bldg_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "bldg_prj")
+    water_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "water_prj")
+    celltowers_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "celltowers_prj")
+    fedlands_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "fedlands_prj")
+    pad_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "pad_prj")
+    urban_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "urban_prj")
+
+    # Load in raster data
+    elev_prj <- terra::rast(file.path(gpkg.folder, "studyarea_tiled_DEM.tiff"))
+    temp.snow.files <- fs::dir_ls(file.path(gpkg.folder, "studyarea_tiled_snow"), type = "file")
+    snow_prj <- pbapply::pblapply(temp.snow.files, terra::rast)
+    names(snow_prj) <- fs::path_ext_remove(basename(temp.snow.files))
+    rm(temp.snow.files)
+
+    # Do a few other calculations to make sure everything exists
+    ## Convert bbox to terra::vect for easier calculations
+    bbox_vect_wgs84 <- terra::vect(sf::st_transform(bbox_buffer, crs = "epsg:4326"))
+
+    # Load in tiles index and project it to correct coordinate system
+    ## Load in tiles index
+    tiles <- sf::st_read(gpkgs$general, layer = "tiles_all_WGS84", quiet = TRUE)
+    ## Project tiles index
+    tiles_prj <- sf::st_transform(tiles, coord.sys)
+
+    # Identify which tiles intersect the study area
+    ## Do intersection between study area and tiles index
+    tiles_bbox <- unique(do.call(c, sf::st_intersects(bbox_buffer, tiles_prj)))
+
+    ## Subset the tiles that are included the bounding box
+    tiles_sel <- tiles$tile[tiles_bbox]
   }else{
-    stop("Could not read studyarea. Be sure that study area is either 'HMD', a string pointing to a file, a SpatVector object from the terra package or an sf object.")
+    # Identify which tiles are included in the study area
+    ## Make sure the study area is an sf object
+    if(studyarea == "HMD"){
+      message("Using the first file in the cleaned HMD folder to define the study area. \nThis can have unintended consequences if HMD comes from multiple areas...")
+      temp1 <- readRDS(hmd.clean.files[1])
+      temp2 <- sf::st_as_sf(temp1, coords = c("longitude", "latitude"), crs = "epsg:4326")
+      sa <- sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(temp2)))
+    }else if(class(studyarea)[1] == "character"){
+      message("Reading study area from file...")
+      sa <- sf::st_read(studyarea, quiet = TRUE)
+    }else if(class(studyarea)[1] == "SpatVector"){
+      message("Converting study area from terra vector to sf...")
+      sa <- sf::st_as_sf(sa)
+    }else if(class(studyarea)[1] == "sf"){
+      message("Study area is already an sf object. No conversion needed")
+      sa <- studyarea
+    }else{
+      stop("Could not read studyarea. Be sure that study area is either 'HMD', a string pointing to a file, a SpatVector object from the terra package or an sf object.")
+    }
+    ## Transform study area to projected crs
+    sa_prj <- sf::st_transform(sa, crs = coord.sys)
+    ## Create bounding box from study area
+    bbox <- sf::st_as_sfc(sf::st_bbox(sa_prj))
+    ## Create buffer around study area to ensure features on edges of area are incorporated into calculations
+    bbox_buffer <- sf::st_buffer(bbox, dist = 1000)
+    ## Convert bbox to terra::vect for easier calculations
+    bbox_vect_wgs84 <- terra::vect(sf::st_transform(bbox_buffer, crs = "epsg:4326"))
+
+    # Load in tiles index and project it to correct coordinate system
+    ## Load in tiles index
+    tiles <- sf::st_read(gpkgs$general, layer = "tiles_all_WGS84", quiet = TRUE)
+    ## Project tiles index
+    tiles_prj <- sf::st_transform(tiles, coord.sys)
+
+    # Identify which tiles intersect the study area
+    ## Do intersection between study area and tiles index
+    tiles_bbox <- unique(do.call(c, sf::st_intersects(bbox_buffer, tiles_prj)))
+
+    ## Subset the tiles that are included the bounding box
+    tiles_sel <- tiles$tile[tiles_bbox]
+
+
+    #-----------------------------------------------------------------------------
+
+    # Load in data from geopackages and project to coord.sys
+    ## Function for loading data
+    loadGPKG <- function(l, n){
+      message("Loading and projecting ", length(tiles_sel), " tiles from ", n)
+      if(n == "bldg"){
+        x <- l[[grep("building", names(l), ignore.case = TRUE)]]
+      }else{
+        x <- l[[grep(n, names(l), ignore.case = TRUE)]]
+      }
+      x1 <- do.call(rbind, lapply(tiles_sel, function(y){
+        tryCatch(sf::st_read(x, layer = y, quiet = TRUE), error = function(e){message(y, " failed. Skipping."); return(NULL)})
+      }))
+      x2 <- sf::st_transform(x1, crs = coord.sys)
+      colnames(x2)[-ncol(x2)] <- paste(colnames(x2)[-ncol(x2)], "_", n, sep = "")
+      colnames(x2)[ncol(x2)] <- "geometry"
+      sf::st_geometry(x2) <- "geometry"
+      return(x2)
+      rm(n, x1, x2)
+      #rm(x)
+    }
+    ## Main roads
+    main_prj <- loadGPKG(l = gpkgs, n = "main")
+    ## NTD local roads
+    ntd_local_prj <- loadGPKG(l = gpkgs, n = "ntd_local")
+    ntd_local_prj <- sf::st_zm(ntd_local_prj)
+    ## NTD trails
+    ntd_trails_prj <- loadGPKG(l = gpkgs, n = "ntd_trail")
+    ## USFS local roads
+    usfs_local_prj <- loadGPKG(l = gpkgs, n = "usfs_local")
+    ## USFS trails
+    usfs_trails_prj <- loadGPKG(l = gpkgs, n = "usfs_trail")
+    ## NTD railroads
+    rail_prj <- loadGPKG(l = gpkgs, n = "railr")
+    ## Buildings
+    bldg_prj <- loadGPKG(l = gpkgs, n = "bldg")
+    ## Water bodies
+    water_prj <- loadGPKG(l = gpkgs, n = "water")
+
+
+    #-----------------------------------------------------------------------------
+
+    # Load data from general geopackage and crop to study area
+    ## Quick function for calculations
+    loadVector <- function(x, gpkg){
+      lyrs <- sf::st_layers(gpkg)
+      x1 <- terra::vect(x = gpkg, layer = lyrs$name[grep(x, lyrs$name)])
+      x2 <- terra::crop(x1, bbox_vect_wgs84)
+      x3 <- sf::st_transform(sf::st_as_sf(x2), crs = coord.sys)
+      colnames(x3)[-ncol(x3)] <- paste(colnames(x3)[-ncol(x3)], "_", x, sep = "")
+      return(x3)
+      rm(x1, x2, x3)
+      #rm(x, gpkg)
+    }
+    ## Cell towers
+    celltowers_prj <- loadVector(x = "CellTowers", gpkg = gpkgs$general)
+    ## Land ownership
+    fedlands_prj <- loadVector(x = "LandOwnership", gpkg = gpkgs$general)
+    ## Land status
+    pad_prj <- loadVector(x = "SpecialStatus", gpkg = gpkgs$general)
+    ## Urban areas
+    urban_prj <- loadVector(x = "UrbanAreas", gpkg = gpkgs$general)
+
+
+    #-----------------------------------------------------------------------------
+
+    # Raster data
+    ## Function for raster data
+    loadRast <- function(x, name){
+      files1 <- fs::dir_ls(x, type = "file", glob = "*.tif$")
+
+      rast1 <- files1[fs::path_ext_remove(basename(files1)) %in% tiles_sel]
+      rast2 <- terra::sprc(rast1)
+      rast3 <- terra::mosaic(rast2)
+      rast_prj <- terra::project(rast3, sa_prj)
+      names(rast_prj) <- name
+      return(rast_prj)
+      rm(files1, rast1, rast2, rast3, rast_prj)
+    }
+    ## Elevation
+    dem_prj <- loadRast(x = rasts$USGS_DEM, name = "elevation")
+
+    ## Calculate elevation-based metrics
+    elev_prj <- c(dem_prj,
+                  terra::terrain(dem_prj, v = "TRI"),
+                  terra::terrain(dem_prj, v = "slope"),
+                  terra::terrain(dem_prj, v = "aspect"))
+    names(elev_prj) <- c("elev_m", "tri", "slope", "aspect")
+
+    ## Snow cover
+    ### Locate the daily snow cover directories
+    snow_dir2 <- fs::dir_ls(rasts$NSIDC_SnowCover, recurse = FALSE, type = "directory")
+    ### Select only directories that overlap in time with HMD
+    snow_days1 <- lapply(hmd.dates, grep, snow_dir2)
+    ### Check that all HMD dates overlap with snow cover
+    if(any(lengths(snow_days1) == 0)){
+      message("Some dates of HMD do not have snow cover information. This will be skipped for now but may cause problems later...")
+    }
+    snow_days2 <- snow_dir2[do.call(c, snow_days1)]
+    ### Create study area rasters of daily snow cover
+    snow_prj <- pbapply::pblapply(snow_days2, loadRast, name = "snowcover")
+    names(snow_prj) <- basename(snow_days2)
+
+    message("Spatial data projected. Preparing HMD calculations...")
+
+    #-----------------------------------------------------------------------------
+
+    # Save tiled data to geopackage for visualization purposes
+    if(save.gpkg){
+      if(!is.character(gpkg.folder)){
+        gpkg.folder <- "studyarea_tiled_data"
+        message("You did not give a proper name to the output folder It will be called ", gpkg.folder, " and be placed in the working directory.")
+      }
+      message("Saving tiled data to ", gpkg.folder)
+      if(!fs::dir_exists(gpkg.folder)){
+        fs::dir_create(gpkg.folder)
+      }
+      save.list <- list("sa" = sa, "sa_prj" = sa_prj, "bbox" = bbox, "bbox_buffer" = bbox_buffer, "tiles_prj_sa" = tiles_prj[tiles_bbox,],
+                        "main_prj" = main_prj, "ntd_local_prj" = ntd_local_prj, "ntd_trails_prj" = ntd_trails_prj,
+                        "usfs_local_prj" = usfs_local_prj, "usfs_trails_prj" = usfs_trails_prj, "railroad_prj" = rail_prj,
+                        "bldg_prj" = bldg_prj, "water_prj" = water_prj,
+                        "celltowers_prj" = celltowers_prj, "fedlands_prj" = fedlands_prj, "pad_prj" = pad_prj, "urban_prj" = urban_prj)
+      pbapply::pblapply(1:length(save.list), function(i){
+        sf::st_write(save.list[[i]], dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = names(save.list)[i], append = FALSE)
+        return(NULL)
+      })
+      terra::writeRaster(elev_prj, filename = file.path(gpkg.folder, "studyarea_tiled_DEM.tiff"), overwrite = TRUE)
+      fs::dir_create(file.path(gpkg.folder, "studyarea_tiled_snow"))
+      pbapply::pblapply(1:length(snow_prj), function(i){
+        terra::writeRaster(snow_prj[[i]], filename = file.path(gpkg.folder, "studyarea_tiled_snow", paste(names(snow_prj)[i], ".tiff", sep = "")), overwrite = TRUE)
+        return(NULL)
+      })
+      rm(save.list)
+    }
   }
-  ## Transform study area to projected crs
-  sa_prj <- sf::st_transform(sa, crs = coord.sys)
-  ## Create bounding box from study area
-  bbox <- sf::st_as_sfc(sf::st_bbox(sa_prj))
-  ## Create buffer around study area to ensure features on edges of area are incorporated into calculations
-  bbox_buffer <- sf::st_buffer(bbox, dist = 1000)
-  ## Convert bbox to terra::vect for easier calculations
-  bbox_vect_wgs84 <- terra::vect(sf::st_transform(bbox_buffer, crs = "epsg:4326"))
-
-  # Load in tiles index and project it to correct coordinate system
-  ## Load in tiles index
-  tiles <- sf::st_read(gen_gpkg, layer = "tiles_all_WGS84", quiet = TRUE)
-  ## Project tiles index
-  tiles_prj <- sf::st_transform(tiles, coord.sys)
-
-  # Identify which tiles intersect the study area
-  ## Do intersection between study area and tiles index
-  tiles_bbox <- unique(do.call(c, sf::st_intersects(bbox_buffer, tiles_prj)))
-
-  ## Subset the tiles that are included the bounding box
-  tiles_sel <- tiles$tile[tiles_bbox]
 
 
-  ##############################################################################
-
-  # Load in data from geopackages and project to coord.sys
-  ## Function for loading data
-  loadGPKG <- function(x){
-    message("Loading and projecting ", length(tiles_sel), " tiles from ", substitute(x))
-    n <- sub("_gpkg", "", substitute(x))
-    ## NEED TO ADD A TRYCATCH SO IT NOTIFIES AND SKIPS ERRORS FOR NOW
-    x1 <- do.call(rbind, lapply(tiles_sel, function(y){
-      tryCatch(sf::st_read(x, layer = y, quiet = TRUE), error = function(e){message(y, " failed. Skipping."); return(NULL)})
-    }))
-    x2 <- sf::st_transform(x1, crs = coord.sys)
-    colnames(x2)[-ncol(x2)] <- paste(colnames(x2)[-ncol(x2)], "_", n, sep = "")
-    colnames(x2)[ncol(x2)] <- "geometry"
-    sf::st_geometry(x2) <- "geometry"
-    return(x2)
-    rm(n, x1, x2)
-    #rm(x)
-  }
-  ## Main roads
-  main_prj <- loadGPKG(x = main_gpkg)
-  ## NTD local roads
-  ntd_local_prj <- loadGPKG(x = ntd_local_gpkg)
-  ntd_local_prj <- sf::st_zm(ntd_local_prj)
-  ## NTD trails
-  ntd_trails_prj <- loadGPKG(x = ntd_trail_gpkg)
-  ## USFS local roads
-  usfs_local_prj <- loadGPKG(x = usfs_local_gpkg)
-  ## USFS trails
-  usfs_trails_prj <- loadGPKG(x = usfs_trails_gpkg)
-  ## NTD railroads
-  rail_prj <- loadGPKG(x = rail_gpkg)
-  ## Buildings
-  bldg_prj <- loadGPKG(x = bldg_gpkg)
-  ## Water bodies
-  water_prj <- loadGPKG(x = water_gpkg)
-
-
-  ##############################################################################
-
-  # Load data from general geopackage and crop to study area
-  ## Quick function for calculations
-  loadVector <- function(x, gpkg){
-    lyrs <- sf::st_layers(gen_gpkg)
-    x1 <- terra::vect(x = gpkg, layer = lyrs$name[grep(x, lyrs$name)])
-    x2 <- terra::crop(x1, bbox_vect_wgs84)
-    x3 <- sf::st_transform(sf::st_as_sf(x2), crs = coord.sys)
-    colnames(x3)[-ncol(x3)] <- paste(colnames(x3)[-ncol(x3)], "_", x, sep = "")
-    return(x3)
-    rm(x1, x2, x3)
-    #rm(x, gpkg)
-  }
-  ## Cell towers
-  celltowers_prj <- loadVector(x = "CellTowers", gpkg = gen_gpkg)
-  ## Land ownership
-  fedlands_prj <- loadVector(x = "LandOwnership", gpkg = gen_gpkg)
-  ## Land status
-  pad_prj <- loadVector(x = "SpecialStatus", gpkg = gen_gpkg)
-  ## Urban areas
-  urban_prj <- loadVector(x = "UrbanAreas", gpkg = gen_gpkg)
-
-
-  ##############################################################################
-
-  # Raster data
-  ## Function for raster data
-  loadRast <- function(x, name){
-    files1 <- fs::dir_ls(x, type = "file", glob = "*.tif$")
-
-    rast1 <- files1[fs::path_ext_remove(basename(files1)) %in% tiles_sel]
-    rast2 <- terra::sprc(rast1)
-    rast3 <- terra::mosaic(rast2)
-    rast_prj <- terra::project(rast3, sa_prj)
-    names(rast_prj) <- name
-    return(rast_prj)
-    rm(files1, rast1, rast2, rast3, rast_prj)
-  }
-  ## Elevation
-  dem_prj <- loadRast(x = dem_dir, name = "elevation")
-
-  ## Calculate elevation-based metrics
-  elev_prj <- c(dem_prj,
-                terra::terrain(dem_prj, v = "TRI"),
-                terra::terrain(dem_prj, v = "slope"),
-                terra::terrain(dem_prj, v = "aspect"))
-  names(elev_prj) <- c("elev_m", "tri", "slope", "aspect")
-
-  ## Snow cover
-  ### Locate the daily snow cover directories
-  snow_dir2 <- fs::dir_ls(snow_dir, recurse = FALSE, type = "directory")
-  ### Select only directories that overlap in time with HMD
-  snow_days1 <- lapply(hmd.dates, grep, snow_dir2)
-  ### Check that all HMD dates overlap with snow cover
-  if(any(lengths(snow_days1) == 0)){
-    message("Some dates of HMD do not have snow cover information. This will be skipped for now but may cause problems later...")
-  }
-  snow_days2 <- snow_dir2[do.call(c, snow_days1)]
-  ### Create study area rasters of daily snow cover
-  snow_prj <- pbapply::pblapply(snow_days2, loadRast, name = "snowcover")
-  names(snow_prj) <- basename(snow_days2)
-
-  message("Spatial data projected. Preparing HMD calculations...")
-
-  ##############################################################################
+  #-----------------------------------------------------------------------------
 
   # Set up for parallel processing
   ## Set up parallel processing
@@ -998,7 +1021,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
     ## Select 1 file
     h1 <- hmd.clean.files[h]
     ## Figure out its name
-    n <- sub("_clean.*", "", basename(hmd.clean.files)[h])
+    n <- sub("_clean.*", "", basename(h1))
     message("Starting ", n, " at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ". This is ", h, " of ", length(hmd.clean.files))
     ## Identify where its going
     out.path <- file.path(out.dir, paste(n, "_classify_", format(Sys.Date(), "%Y%m%d"), ".RDS", sep = ""))
@@ -1119,7 +1142,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
         dist_usfs_trail <- distToFeature(x = h6, n = "usfs_trail", feature = usfs_trails_prj)
         ## Distance to railroads
         #message("Distance to usfs trails calculated at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "\nCalculating distance to railroads...")
-        dist_rail <- distToFeature(x = h6, n = "rail", feature = rail_prj)
+        dist_rail <- distToFeature(x = h6, n = "railr", feature = rail_prj)
         ## Distance to buildings
         #message("Distance to railroads calculated at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "\nCalculating distance to buildings...")
         dist_bldg <- distToFeature(x = h6, n = "bldg", feature = bldg_prj)
@@ -1152,7 +1175,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
             d1 <- switch(arg.col,
                          "dist_bldg" = units::drop_units(dist_bldg[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
                          "dist_main" = units::drop_units(dist_main[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
-                         "dist_rail" = units::drop_units(dist_rail[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
+                         "dist_railr" = units::drop_units(dist_rail[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
                          "dist_local" = units::drop_units(DT1[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
                          "dist_trail" = units::drop_units(DT1[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]))
             in.th <- d1[,lapply(.SD, function(x){x <= th}), .SDcols = "DIST"]

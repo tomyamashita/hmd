@@ -32,5 +32,6 @@
 * Added OID.POINT to flagAssignment function to ensure unique ID is maintained
 * Added the calculateIndices function for calculating unique IDs
 * Continued modification of functions for alignment with data.table syntax, especially in flagAssignment
-
+* Added start and end times to flagAssignment and flagRemoval
+* Speed and efficiency improvements to classifyHMD, especially relating to initial data loading
 

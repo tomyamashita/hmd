@@ -14,6 +14,9 @@ classifyHMD(
   road.source,
   snowfraction = 50,
   add.calcs = TRUE,
+  prep.data = FALSE,
+  save.gpkg = FALSE,
+  gpkg.folder = NULL,
   pp = FALSE,
   cores.left = NULL
 )
@@ -31,7 +34,7 @@ If a geographic coordinate system is used (e.g., WGS84 or NAD83), this will defa
 \item{data.dir}{character. Directory where the geopackage and raster layers are stored.
 See details for important information about the structure of this directory}
 
-\item{ths}{list. Distance thresholds for main roads (main), railroads (rail), buildings (bldg), local roads (local), and trails (trail).
+\item{ths}{list. Distance thresholds for main roads (main), railroads (railr), buildings (bldg), local roads (local), and trails (trail).
 If not all names are provided, this function will exclude those from determining hmd.type.}
 
 \item{road.source}{character. The source data to use for local roads and trail data.
@@ -41,6 +44,14 @@ If both are provided, then the function will use the nearest of the two to deter
 \item{snowfraction}{numeric between 0 and 100. What percentage of snow cover in a cell is required to assign a point as having snow.}
 
 \item{add.calcs}{logical. Should the additional, non-distance calculations be included? See details for which calculations are included}
+
+\item{prep.data}{logical. Has the spatial data already been created and saved using save.gpkg? If so, the function will look for data in gpkg.folder instead of creating it.}
+
+\item{save.gpkg}{logical. Should the spatial data used in the calculations be saved to a geopackage file?}
+
+\item{gpkg.folder}{character. The name of the output folder where items should be saved. Only relevant if save.gpkg = TRUE or prep.data = TRUE.
+Inside this folder, 3 files will be created: studyarea_tiled_data.gpkg will contain all vector data, studyarea_tiled_DEM.tiff will contain elevation-related data, and studyarea_tiled_snow.tiff will contain daily snow cover data.
+This function will create a folder if the named folder does not exist}
 
 \item{pp}{logical. Should the function run using parallel processing?}
 
