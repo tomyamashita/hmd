@@ -60,11 +60,12 @@
 ##' ## No example right now
 ##' }
 flagAssignment <- function(in.dir, out.dir, move.file = TRUE, pp = FALSE, cores.left = NULL){
-  #in.dir <-file.path(getwd(), "data_1_raw")       # Directory containing raw data
-  #out.dir <- file.path(getwd(), "data_2_flagged") # Directory where flagged data should be saved
+  #in.dir <-file.path("E:", "HMD", "Classification_Rec", "data_HMD_v3", "raw")       # Directory containing raw data
+  #out.dir <- file.path("E:", "HMD", "Classification_Rec", "data_HMD_v3", "flagged") # Directory where flagged data should be saved
   #move.file <- TRUE
   #pp <- TRUE                                      # Should parallel processing be enabled?
   #cores.left <- 20                                 # How many processing cores should be reserved for additional use. Suggest leaving at least 1.
+
   # Initial file path checks
   if(!fs::dir_exists(in.dir)){
     stop("Your in directory does not exist. The inputted file path was ", in.dir)
@@ -82,7 +83,9 @@ flagAssignment <- function(in.dir, out.dir, move.file = TRUE, pp = FALSE, cores.
   }
 
   # Prepare OIDs for all data
+  message("Calculating number of rows in all data...")
   f.rows <- calculateIndices(in.files = files.raw)
+  message("Calculation complete. Doing flag assignment...")
 
   # Set up parallel processing
   if(pp == TRUE){
@@ -116,11 +119,13 @@ flagAssignment <- function(in.dir, out.dir, move.file = TRUE, pp = FALSE, cores.
     # Load in the raw data
     message(paste("\nStarting flag assignment for ", name, " at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), sep = ""))
     fs1 <- data.table::as.data.table(readRDS(x))
-    fs1$OID.POINT <- f.rows[index == i,"OID.start"]:f.rows[index == i,"OID.end"]
+
+    # Add unique identifier and date-time information
+    fs1[,`:=` (OID.POINT = seq(f.rows[index == i,(OID.start)], f.rows[index == i,(OID.end)]),
+               timestamp_numeric = bit64::as.double.integer64(timestamp) * 1000)]
 
     # Set the time in UTC from an integer64 object
-    fs1$timestamp_numeric <- bit64::as.double.integer64(fs1$timestamp) * 1000
-    fs1$timestamp_POSIXct.UTC <- lubridate::as_datetime(fs1$timestamp_numeric/1000000, origin = "1970-01-01", tz = "UTC")
+    fs1[,`:=` (timestamp_POSIXct.UTC = lubridate::as_datetime(timestamp_numeric/1000000, origin = "1970-01-01", tz = "UTC"))]
 
     # Convert UTC time to local time
     fs1[, `:=` (timestamp_POSIXct.local = lubridate::with_tz(timestamp_POSIXct.UTC, tzone = unique(timezone))), by = timezone]
@@ -142,7 +147,7 @@ flagAssignment <- function(in.dir, out.dir, move.file = TRUE, pp = FALSE, cores.
       })
     }else if(is.integer(fs1$forensicflag)){
       # If the forensicflag column is a regular integer, do this:
-      fs1 <- fs1[, `:=` (flag = paste(formatC(which(as.numeric(intToBits(forensicflag)) == 1), width = 2, flag = "0"), collapse = " ")), by = OID]
+      fs1[, `:=` (flag = paste(formatC(which(as.numeric(intToBits(forensicflag)) == 1), width = 2, flag = "0"), collapse = " ")), by = OID.POINT]
     }else{
       stop("The forensicflag column should be an integer64 or integer data type")
     }
@@ -151,34 +156,46 @@ flagAssignment <- function(in.dir, out.dir, move.file = TRUE, pp = FALSE, cores.
     message("Flags identified for ", name, ". Assigning flag values...")
     ## Flags use a 0-based index and R uses an index base-1 so need to add 1 to flag to align with documentation
     fs1[,`:=` (flag_name = gsub(" ", ", ", flag))]
-    ## MISSING FLAGS 1-7 ##
-    fs1[,flag_name := sub("08", "LAT_GRID_LOCATION", flag_name)]
-    fs1[,flag_name := sub("09", "TOO_MANY_DEVICES_AT_LOCATION", flag_name)]
-    fs1[,flag_name := sub("10", "SPOOF_LOCATION", flag_name)]
-    fs1[,flag_name := sub("11", "RADIO_DERIVED", flag_name)]
-    ## MISSING FLAG 12 ##
-    fs1[,flag_name := sub("13", "EU", flag_name)]
-    fs1[,flag_name := sub("14", "OVER_CAPACITY_DEVICE", flag_name)]
-    fs1[,flag_name := sub("15", "LIKELY_DRIVING", flag_name)]
-    fs1[,flag_name := sub("16", "HIGH_ACCURACY", flag_name)]     # 0 - 35 m accuracy
-    fs1[,flag_name := sub("17", "MODERATE_ACCURACY", flag_name)] # 50 - 220 m accuracy
-    fs1[,flag_name := sub("18", "LOW_ACCURACY", flag_name)]      # 250 - 1000 m accuracy
-    ## Moderate-High accuracy = both High and moderate accuracy flags = 35 - 50 m accuracy
-    ## Moderate-Low accuracy = both Moderate and Low accuracy flags = 220 - 250 m accuracy
-    ## MISSING FLAG 19 ##
-    fs1[,flag_name := sub("20", "MOBILE_NETWORK", flag_name)]
-    fs1[,flag_name := sub("21", "HYPERV_OUTSIDE_CLUSTER", flag_name)]
-    fs1[,flag_name := sub("22", "HYPERV_WITHIN_CLUSTER", flag_name)]
-    fs1[,flag_name := sub("23", "HYPERV_CLUSTER_INTERLEAVE", flag_name)]
-    fs1[,flag_name := sub("24", "TIMESHIFT", flag_name)]
-    ## MISSING FLAG 25 ##
-    fs1[,flag_name := sub("26", "US", flag_name)]
-    ## MISSING FLAG 27 ##
-    fs1[,flag_name := sub("28", "IMPLAUSIBLE_MOVEMENT or BI_LOCATION", flag_name)]
-    fs1[,flag_name := sub("29", "APPROXIMATED_SIGNAL", flag_name)]
-    fs1[,flag_name := sub("30", "REPLAY", flag_name)]
-    ## MISSING FLAGS 31-32 ##
-    ## Missing flags are company-internal flags and have not been published
+
+    # Assign flag names to flag numbers
+    ## Missing/unknown flags are company-internal flags and have not been published
+    lapply(formatC(1:32, width = 2, flag = "0"), function(f){
+      fn <- switch(f,
+                   # Flags 1-7 are missing
+                   "01" = "missing_flag01", "02" = "missing_flag02", "03" = "missing_flag03", "04" = "missing_flag04", "05" = "missing_flag05", "06" = "missing_flag06", "07" = "missing_flag07",
+                   "08" = "LAT_GRID_LOCATION",
+                   "09" = "TOO_MANY_DEVICES_AT_LOCATION",
+                   "10" = "SPOOF_LOCATION",
+                   "11" = "RADIO_DERIVED",
+                   # Flag 12 is missing
+                   "12" = "missing_flag12",
+                   "13" = "EU",
+                   "14" = "OVER_CAPACITY_DEVICE",
+                   "15" = "LIKELY_DRIVING",
+                   "16" = "HIGH_ACCURACY",                      # 0 - 35 m accuracy
+                   "17" = "MODERATE_ACCURACY",                  # 50 - 220 m accuracy
+                   "18" = "LOW_ACCURACY",                       # 250 - 1000 m accuracy
+                   ## Moderate-High accuracy = both High and moderate accuracy flags = 35 - 50 m accuracy
+                   ## Moderate-Low accuracy = both Moderate and Low accuracy flags = 220 - 250 m accuracy
+                   # Flag 19 is missing
+                   "19" = "missing_flag19",
+                   "20" = "MOBILE_NETWORK",
+                   "21" = "HYPERV_OUTSIDE_CLUSTER",
+                   "22" = "HYPERV_WITHIN_CLUSTER",
+                   "23" = "HYPERV_CLUSTER_INTERLEAVE",
+                   "24" = "TIMESHIFT",
+                   # Flag 25 is missing
+                   "25" = "missing_flag25",
+                   "26" = "US",
+                   # Flag 27 is missing
+                   "27" = "missing_flag27",
+                   "28" = "IMPLAUSIBLE_MOVEMENT or BI_LOCATION",
+                   "29" = "APPROXIMATED_SIGNAL",
+                   "30" = "REPLAY",
+                   # Flags 31 - 32 are missing
+                   "31" = "missing_flag31", "32" = "missing_flag32")
+      fs1[, flag_name := sub(f, fn, flag_name)]
+    })
 
     # Save the output to the output directory
     out.path <- file.path(out.dir, paste(name, "_flagged_", format(Sys.Date(), "%Y%m%d"), ".RDS", sep = ""))
