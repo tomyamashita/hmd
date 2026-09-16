@@ -27,3 +27,10 @@
 * Updated trackFun documentation to reflect changes
 * Updated classifyHMD to incorporate changes to trackFun
 
+### Version 0.0.0.6 (2026-09-16)
+* Modified workflow to ensure that a unique OID is maintained from flagRemoval to classifyHMD functions
+* Added OID.POINT to flagRemoval function to ensure unique ID is maintained
+* Added the calculateIndices function for calculating unique IDs
+
+
+

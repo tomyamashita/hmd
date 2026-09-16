@@ -81,6 +81,10 @@ flagAssignment <- function(in.dir, out.dir, move.file = TRUE, pp = FALSE, cores.
     stop("There are no files in the in.dir. Is this step complete?")
   }
 
+  # Prepare OIDs for all data
+  f.rows <- calculateIndices(in.files = files.raw)
+
+  # Set up parallel processing
   if(pp == TRUE){
     message("Parallel Processing Enabled")
     if(is.null(cores.left)){
@@ -100,9 +104,11 @@ flagAssignment <- function(in.dir, out.dir, move.file = TRUE, pp = FALSE, cores.
   }
 
   # Run flag assignment on each file individually
-  out1 <- pbapply::pblapply(files.raw, cl = cl1, function(x){
+  out1 <- pbapply::pblapply(1:length(files.raw), cl = cl1, function(i){
     # For testing purposes, untext this field
-    #x <- files.raw[1]
+    #i <- 1
+
+    x <- files.raw[i]
 
     # The file name (without the extension) for the raw data
     name <- fs::path_ext_remove(basename(x))
@@ -110,7 +116,7 @@ flagAssignment <- function(in.dir, out.dir, move.file = TRUE, pp = FALSE, cores.
     # Load in the raw data
     message(paste("\nStarting flag assignment for ", name, " at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), sep = ""))
     fs1 <- data.table::as.data.table(readRDS(x))
-    fs1$OID <- 1:nrow(fs1)
+    fs1$OID.POINT <- f.rows[index == i,"OID.start"]:f.rows[index == i,"OID.end"]
 
     # Set the time in UTC from an integer64 object
     fs1$timestamp_numeric <- bit64::as.double.integer64(fs1$timestamp) * 1000
@@ -433,7 +439,7 @@ flagRemoval <- function(in.dir, out.dir, FF.remove = NULL, FF.suspect = NULL, me
 
     # Sort data by unique user (grid) and timestamp
     message("Loaded data and removed duplicates and bad flags from ", name, ". Sorting and calculating movement parameters...")
-    f3 <- f2[order(grid,timestamp_POSIXct.UTC),]
+    f3 <- f2[order(grid, timestamp_POSIXct.UTC),]
 
     # Day in local time
     f3[,c("day") := lubridate::as_date(timestamp_POSIXct.local)]
@@ -989,7 +995,8 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
     }else{
       # Load in the cleaned HMD data
       message("Loading HMD and calculating time of day metrics...")
-      h2 <- readRDS(h1)[,.(grid = grid,
+      h2 <- readRDS(h1)[,.(OID.POINT = OID.POINT,
+                           grid = grid,
                            day = day,
                            longitude = longitude,
                            latitude = latitude,
@@ -1695,4 +1702,47 @@ thinHMD <- function(x, idcol, dtcol, rate = lubridate::seconds(30), tolerance = 
 
 #-------------------------------------------------------------------------------
 
+# Calculate number of rows in each month's worth of data to create a universal Object Identifier that is unique for each row
+##' @description Calculate number of rows in each month to create a continuous OID across months
+##'
+##' @title Create index across multiple files
+##'
+##' @param in.files. character vector of file paths to saved RDS files containing data.tables or data.frames.
+##' @param starting. Numeric. What should the starting value of the index be? Defaults to 1
+##'
+##' @details This function is standalone but intended to be used within the \code{\link{flagRemoval}} as a way to create a unique OID that starts at the beginning of the function.
+##'
+##' @returns data.table with index number of the in.files, the number of rows in each file, the starting index number, and ending index number
+##'
+##' @references \code{\link{flagRemoval}}
+##'
+##' @inheritSection flagAssignment {Disclaimer}
+##'
+##' @importFrom data.table data.table shift
+##'
+##' @keywords manip
+##'
+##' @concept hmd
+##' @concept indicing
+##'
+##' @export
+##'
+##' @examples \dontrun{
+##' ## No example right now
+##' }
+calculateIndices <- function(in.files, starting = 1){
+  #in.files <- files.raw
+
+  f.rows <- data.table::data.table(index = 1:length(in.files), rows = sapply(in.files, function(x){nrow(readRDS(x))}))
+  f.rows[,`:=` (OID.start = NA,
+                OID.end = cumsum(rows))]
+  f.rows[,`:=` (OID.start = data.table::shift(OID.end, n = 1, fill = 0, type = "lag") + starting)]
+  f.rows
+  return(f.rows)
+  rm(in.files, f.rows)
+  #rm(in.dir)
+}
+
+
+#-------------------------------------------------------------------------------
 
