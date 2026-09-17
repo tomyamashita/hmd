@@ -55,7 +55,10 @@ This function will create a folder if the named folder does not exist}
 
 \item{pp}{logical. Should the function run using parallel processing?}
 
-\item{cores.left}{numeric. How many cores should be reserved? Ignored when pp = FALSE}
+\item{cores.left}{numeric. How many cores should be reserved? Ignored when pp = FALSE.
+Most functions should not be run on more than 8 cores. A warning is given when you use more than 8 cores.}
+
+\item{move.files}{logical. Should completed files be moved to a sub-directory in the the in.dir. This called "classified" by default.}
 }
 \value{
 A list of file paths leading to the newly created classified data.
@@ -74,8 +77,8 @@ Even for moderately sized HMD files, distance calculations are very memory inten
 \section{{Warning}}{
 
 Working with HMD can be very memory intensive.
-When using parallel processing, be careful how many cores you use.
-The function will give a warning message if you use more than 5 cores.
+When using parallel processing, be careful how many cores you use. This can easily overuse RAM and crash the computer.
+Functions that allow parallel processing will give a warning message if you use more than 8 cores.
 }
 
 \section{{Disclaimer}}{

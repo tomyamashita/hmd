@@ -4,7 +4,6 @@
 ### flagAssignment()
 ### flagRemoval()
 ### classifyHMD()
-### distToFeatures()
 ### trackFun()
 ### flaggedToRaw()
 ### splitByMonth()
@@ -22,7 +21,8 @@
 ##' @param out.dir character. Directory where flagged data should be saved
 ##' @param move.file logical. Should completed files be moved to a sub-directory in the the in.dir. This called "flagged" by default.
 ##' @param pp  logical. Should the function run using parallel processing?
-##' @param cores.left numeric. How many cores should be reserved? Ignored when pp = FALSE
+##' @param cores.left numeric. How many cores should be reserved? Ignored when pp = FALSE.
+##' Most functions should not be run on more than 8 cores. A warning is given when you use more than 8 cores.
 ##'
 ##' @details This function takes raw HMD and assigns flags and converts an integer date into a readable POSIXct date.
 ##' The local time is based on the timezone field in the raw data.
@@ -33,8 +33,8 @@
 ##'
 ##' @section {Warning}:
 ##' Working with HMD can be very memory intensive.
-##' When using parallel processing, be careful how many cores you use.
-##' The function will give a warning message if you use more than 5 cores.
+##' When using parallel processing, be careful how many cores you use. This can easily overuse RAM and crash the computer.
+##' Functions that allow parallel processing will give a warning message if you use more than 8 cores.
 ##'
 ##' @section {Disclaimer}:
 ##' The functions in this package are in active development and likely has bugs.
@@ -100,8 +100,12 @@ flagAssignment <- function(in.dir, out.dir, move.file = TRUE, pp = FALSE, cores.
                              error = function(e){message("There was an error coercing cores.left to a number. The default of 2 cores are not utilized"); return(2)},
                              warning = function(w){message("Could not coerce cores.left to a number. The default of 2 cores are not utilized"); return(2)})
     }
-    if(parallel::detectCores() - cores.left > 5){
-      message("Using more than 5 cores is likely to overuse the computer's RAM.")
+    if(parallel::detectCores() - cores.left > 8){
+      message("Using more than 8 cores is likely to overuse the computer's RAM.")
+    }
+    if(parallel::detectCores() - cores.left <= 0){
+      message("You are reserving more cores than are available. Using only 2 cores")
+      cores.left <- parallel::detectCores() - 2
     }
     cl1 <- parallel::makeCluster(parallel::detectCores() - cores.left, outfile = "out.txt")
     parallel::clusterExport(cl1, varlist = c("in.dir", "files.raw", "out.dir", "move.file"), envir = environment())
@@ -396,14 +400,18 @@ flagRemoval <- function(in.dir, out.dir, FF.remove = NULL, FF.suspect = NULL, me
   if(pp == TRUE){
     message("Parallel Processing Enabled")
     if(is.null(cores.left)){
-      cores.left <- 5
+      cores.left <- 20
     }else{
       cores.left <- tryCatch(as.numeric(cores.left),
                              error = function(e){message("There was an error coercing cores.left to a number. The default of 2 cores are not utilized"); return(2)},
                              warning = function(w){message("Could not coerce cores.left to a number. The default of 2 cores are not utilized"); return(2)})
     }
-    if(parallel::detectCores() - cores.left > 5){
-      message("Using more than 5 cores is not recommended.")
+    if(parallel::detectCores() - cores.left > 8){
+      message("Using more than 8 cores is not recommended.")
+    }
+    if(parallel::detectCores() - cores.left <= 0){
+      message("You are reserving more cores than are available. Using only 2 cores")
+      cores.left <- parallel::detectCores() - 2
     }
     cl1 <- parallel::makeCluster(parallel::detectCores() - cores.left, outfile = "out.txt")
     parallel::clusterExport(cl1, varlist = c("in.dir", "files.flagged", "FF.all", "FF.suspect", "FF.remove", "out.dir", "method", "all.keep", "move.files"), envir = environment())
@@ -620,6 +628,8 @@ flagRemoval <- function(in.dir, out.dir, FF.remove = NULL, FF.suspect = NULL, me
 ##' @param gpkg.folder character. The name of the output folder where items should be saved. Only relevant if save.gpkg = TRUE or prep.data = TRUE.
 ##' Inside this folder, 3 files will be created: studyarea_tiled_data.gpkg will contain all vector data, studyarea_tiled_DEM.tiff will contain elevation-related data, and studyarea_tiled_snow.tiff will contain daily snow cover data.
 ##' This function will create a folder if the named folder does not exist
+##' @param move.files logical. Should completed files be moved to a sub-directory in the the in.dir. This called "classified" by default.
+##'
 ##' @inheritParams flagAssignment pp cores.left
 ##'
 ##' @details This function uses a previously downloaded data directory containing spatial data and calculates distance to features and possibly additional spatial data associated with HMD.
@@ -709,7 +719,12 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
     # Load in HMD files
     ## Cleaned HMD data
     hmd.clean.files <- fs::dir_ls(path = in.dir, type = "file", glob = "*_clean*")
-    message(length(hmd.clean.files), " file(s) in ", in.dir, " will be classified.")
+    # Check that there are raw files in the folder
+    if(length(hmd.clean.files) == 0){
+      stop("There are no files in the in.dir. Is this step complete?")
+    }else{
+      message(length(hmd.clean.files), " file(s) in ", in.dir, " will be classified.")
+    }
     ## Already classified data
     hmd.class.files <- fs::dir_ls(path = out.dir, type = "file", glob = "*_classify*")
 
@@ -853,25 +868,6 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
     #-----------------------------------------------------------------------------
 
     # Load in data from geopackages and project to coord.sys
-    ## Function for loading data
-    loadGPKG <- function(l, n){
-      message("Loading and projecting ", length(tiles_sel), " tiles from ", n)
-      if(n == "bldg"){
-        x <- l[[grep("building", names(l), ignore.case = TRUE)]]
-      }else{
-        x <- l[[grep(n, names(l), ignore.case = TRUE)]]
-      }
-      x1 <- do.call(rbind, lapply(tiles_sel, function(y){
-        tryCatch(sf::st_read(x, layer = y, quiet = TRUE), error = function(e){message(y, " failed. Skipping."); return(NULL)})
-      }))
-      x2 <- sf::st_transform(x1, crs = coord.sys)
-      colnames(x2)[-ncol(x2)] <- paste(colnames(x2)[-ncol(x2)], "_", n, sep = "")
-      #colnames(x2)[ncol(x2)] <- "geometry"
-      #sf::st_geometry(x2) <- "geometry"
-      return(x2)
-      rm(n, x1, x2)
-      #rm(x)
-    }
     ## Main roads
     main_prj <- loadGPKG(l = gpkgs, n = "main")
     ## NTD local roads
@@ -894,17 +890,6 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
     #-----------------------------------------------------------------------------
 
     # Load data from general geopackage and crop to study area
-    ## Quick function for calculations
-    loadVector <- function(x, gpkg){
-      lyrs <- sf::st_layers(gpkg)
-      x1 <- terra::vect(x = gpkg, layer = lyrs$name[grep(x, lyrs$name)])
-      x2 <- terra::crop(x1, bbox_vect_wgs84)
-      x3 <- sf::st_transform(sf::st_as_sf(x2), crs = coord.sys)
-      colnames(x3)[-ncol(x3)] <- paste(colnames(x3)[-ncol(x3)], "_", x, sep = "")
-      return(x3)
-      rm(x1, x2, x3)
-      #rm(x, gpkg)
-    }
     ## Cell towers
     celltowers_prj <- loadVector(x = "CellTowers", gpkg = gpkgs$general)
     ## Land ownership
@@ -918,18 +903,6 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
     #-----------------------------------------------------------------------------
 
     # Raster data
-    ## Function for raster data
-    loadRast <- function(x, name){
-      files1 <- fs::dir_ls(x, type = "file", glob = "*.tif$")
-
-      rast1 <- files1[fs::path_ext_remove(basename(files1)) %in% tiles_sel]
-      rast2 <- terra::sprc(rast1)
-      rast3 <- terra::mosaic(rast2)
-      rast_prj <- terra::project(rast3, sa_prj)
-      names(rast_prj) <- name
-      return(rast_prj)
-      rm(files1, rast1, rast2, rast3, rast_prj)
-    }
     ## Elevation
     dem_prj <- loadRast(x = rasts$USGS_DEM, name = "elevation")
 
@@ -1001,8 +974,8 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
                              error = function(e){message("There was an error coercing cores.left to a number. The default of 2 cores are not utilized"); return(2)},
                              warning = function(w){message("Could not coerce cores.left to a number. The default of 2 cores are not utilized"); return(2)})
     }
-    if(parallel::detectCores() - cores.left > 5){
-      message("Beware, using more than 5 cores is likely to overuse the computer's RAM...")
+    if(parallel::detectCores() - cores.left > 8){
+      message("Beware, using more than 8 cores is likely to overuse the computer's RAM...")
     }
     if(parallel::detectCores() - cores.left <= 0){
       message("You are reserving more cores than are available. Using only 2 cores")
@@ -1086,17 +1059,6 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
 
       message("Time of day calculated. Converting to spatial data.frame...")
 
-      # Function for calculating distance metrics
-      distToFeature <- function(x, n, feature){
-        near <- sf::st_nearest_feature(x = x, y = feature)
-        dist <- sf::st_distance(x = x, y = feature[near,], by_element = TRUE)
-        out <- data.table::data.table(OID = x$OID, sf::st_drop_geometry(feature)[near,], near, units::set_units(dist, "meter"))
-        colnames(out) <- c("OID", colnames(feature)[!grepl("geom", colnames(feature))], paste(c("near", "dist"), "_", n, sep = ""))
-        return(out)
-        rm(near, dist, out)
-        #rm(x, n, feature)
-      }
-
       # Convert to spatial file
       if(nrow(h4) > 500000){
         chunks <- data.frame(start = seq(1,nrow(h4), by = 500000), end = c(seq(1,nrow(h4), by = 500000)[-1]-1, nrow(h4)))
@@ -1131,7 +1093,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
         h7 <- data.table::data.table(h4.temp[OID %in% h6$OID,], sf::st_coordinates(h6), crs = coord.sys)
 
         ## Distance to main roads
-        message("Calculating distance metrics for Chunk ", i, " of ", nrow(chunks), " starting at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
+        message("Calculating distance metrics for File ", h, ", Chunk ", i, " of ", nrow(chunks), " starting at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
         #message("HMD spatialized and cropped to study area at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "\nCalculating distance to main roads...")
         dist_main <- distToFeature(x = h6, n = "main", feature = main_prj)
         ## Distance to NTD local roads
@@ -1152,7 +1114,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
         ## Distance to buildings
         #message("Distance to railroads calculated at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "\nCalculating distance to buildings...")
         dist_bldg <- distToFeature(x = h6, n = "bldg", feature = bldg_prj)
-        message("Distance metrics calculations for Chunk ", i, " of ", nrow(chunks), " completed at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
+        message("Distance metrics calculations for File ", h, ", Chunk ", i, " of ", nrow(chunks), " completed at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"))
 
         # Calculate HMD type
         ## Determine if location is close to each infrastructure
@@ -1203,21 +1165,16 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
           ## Calculate whether HMD point intersects an urban area
           int.urban <- sf::st_intersects(x = h6, y = urban_prj)
 
-          message("urban done...")
           # Calculate distance to nearest cell tower
           dist.cell <- distToFeature(x = h6, n = "cell", feature = celltowers_prj)
 
-          message("Cell done...")
           # On federal lands
           ## Calculate whether HMD point intersects federal lands
           int.fed <- sf::st_intersects(x = h6, y = fedlands_prj)
 
-          message("federal lands done...")
           # Special Management area
           ## Calculate whether HMD point intersects protected areas
           int.pad <- sf::st_intersects(x = h6, y = pad_prj)
-
-          message("pad done...")
 
           # Rasters need to be loaded in when parallel processing is enabled due to issues with how memory is allocated in terra package
           if(pp == TRUE){
@@ -1233,8 +1190,6 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
           elev1 <- data.table::as.data.table(terra::extract(elev_prj, h6))
           colnames(elev1)[1] <- "OID"
           elev1[1:5,]
-
-          message("elevation done...")
 
           # Add new columns
           h7.adds <- data.table::data.table(OID = h7$OID,
@@ -1294,6 +1249,17 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
         }
         #h8
 
+        ## Move completed files to a subfolder
+        if(move.files == TRUE){
+          if(!fs::dir_exists(file.path(dirname(h1), "classified"))){
+            message("Creating the classified folder inside ", in.dir)
+            fs::dir_create(file.path(dirname(h1), "classified"))
+          }
+          fs::file_move(h1, file.path(dirname(h1), "classified", basename(x)))
+        }else{
+          message("Files not moved.")
+        }
+
         # Return different outputs based on number of chunks
         if(nrow(chunks) == 1){
           return(h8)
@@ -1344,6 +1310,8 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
   if(fs::dir_exists("tempDir_Spatial")){
     fs::dir_delete("tempDir_Spatial")
   }
+
+
 
   # Convert the outputs to a string
   hmd2 <- do.call(c, hmd1)
@@ -1499,48 +1467,6 @@ trackFun <- function(ds, xcol = "X", ycol = "Y", dtcol = "ts_UTC", idcol = "grid
   return(out4)
   rm(ds2, ds3, o, out1, out2, out3, out4, a, p)
   #rm(ds, xcol, ycol, dtcol, idcol)
-}
-
-
-#-------------------------------------------------------------------------------
-
-# Calculate distance to nearest feature (added 2026-05-28) ####
-##' @description Simplified calculation of distance to nearest feature while maintaining structure of nearest feature data
-##'
-##' @title Distance to the nearest feature
-##'
-##' @param x sf object. Spatial data.frame of the input data
-##' @param n String. Name that should be used for output files
-##' @param feature sf object. Spatial data.frame of the nearest feature
-##'
-##' @details This is just a simple function to calculate distance to nearest feature and add features of the nearest feature to the output.
-##'
-##' @return a data.table object in the same order as X with the distance to nearest feature and features of the nearest feature.
-##'
-##' @inheritSection flagAssignment {Disclaimer}
-##'
-##' @seealso \code{\link{classifyHMD}}
-##'
-##' @importFrom sf st_nearest_feature st_distance st_drop_geometry
-##' @importFrom data.table data.table
-##' @importFrom units set_units
-##'
-##' @keywords methods
-##'
-##' @concept HMD
-##' @concept Distance to Feature
-##'
-##' @export
-##'
-##' @examples \dontrun{
-##' ## No example right now
-##' }
-distToFeature <- function(x, n, feature){
-  near <- sf::st_nearest_feature(x = x, y = feature)
-  dist <- sf::st_distance(x = x, y = feature[near,], by_element = TRUE)
-  out <- data.table::data.table(OID = x$OID, sf::st_drop_geometry(feature)[near,], near, units::set_units(dist, "meter"))
-  colnames(out) <- c("OID", colnames(feature)[!grepl("geometry", colnames(feature))], paste(c("near", "dist"), "_", n, sep = ""))
-  return(out)
 }
 
 
@@ -1756,50 +1682,6 @@ thinHMD <- function(x, idcol, dtcol, rate = lubridate::seconds(30), tolerance = 
   }
   rm(resFun, x1, x2)
   #rm(x, idcol, dtcol, rate, tolerance, thin)
-}
-
-
-#-------------------------------------------------------------------------------
-
-# Calculate number of rows in each month's worth of data to create a universal Object Identifier that is unique for each row
-##' @description Calculate number of rows in each month to create a continuous OID across months
-##'
-##' @title Create index across multiple files
-##'
-##' @param in.files. character vector of file paths to saved RDS files containing data.tables or data.frames.
-##' @param starting. Numeric. What should the starting value of the index be? Defaults to 1
-##'
-##' @details This function is standalone but intended to be used within the \code{\link{flagRemoval}} as a way to create a unique OID that starts at the beginning of the function.
-##'
-##' @returns data.table with index number of the in.files, the number of rows in each file, the starting index number, and ending index number
-##'
-##' @references \code{\link{flagRemoval}}
-##'
-##' @inheritSection flagAssignment {Disclaimer}
-##'
-##' @importFrom data.table data.table shift
-##'
-##' @keywords manip
-##'
-##' @concept hmd
-##' @concept indicing
-##'
-##' @export
-##'
-##' @examples \dontrun{
-##' ## No example right now
-##' }
-calculateIndices <- function(in.files, starting = 1){
-  #in.files <- files.raw
-
-  f.rows <- data.table::data.table(index = 1:length(in.files), rows = sapply(in.files, function(x){nrow(readRDS(x))}))
-  f.rows[,`:=` (OID.start = NA,
-                OID.end = cumsum(rows))]
-  f.rows[,`:=` (OID.start = data.table::shift(OID.end, n = 1, fill = 0, type = "lag") + starting)]
-  f.rows
-  return(f.rows)
-  rm(in.files, f.rows)
-  #rm(in.dir)
 }
 
 

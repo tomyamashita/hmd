@@ -1,10 +1,10 @@
 # Othe functions
 
 ## This script contains the following functions:
-### createBldgTiles
+### createBldgTiles()
 
 
-################################################################################
+#-------------------------------------------------------------------------------
 
 # Create building tiles from Microsoft Building Detector ####
 ##' @description Download building tiles from Microsoft's building detector
@@ -124,4 +124,8 @@ createBldgTiles <- function(url = "https://minedbuildings.z5.web.core.windows.ne
   return(t4)
   rm(db1, db2, db3, t2, t3, t4)
 }
+
+
+#-------------------------------------------------------------------------------
+
 

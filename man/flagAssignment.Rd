@@ -21,7 +21,8 @@ flagAssignment(
 
 \item{pp}{logical. Should the function run using parallel processing?}
 
-\item{cores.left}{numeric. How many cores should be reserved? Ignored when pp = FALSE}
+\item{cores.left}{numeric. How many cores should be reserved? Ignored when pp = FALSE.
+Most functions should not be run on more than 8 cores. A warning is given when you use more than 8 cores.}
 }
 \value{
 A list of file paths leading to the newly created flagged data.
@@ -39,8 +40,8 @@ There currently is no function in this package that creates the raw data...
 \section{{Warning}}{
 
 Working with HMD can be very memory intensive.
-When using parallel processing, be careful how many cores you use.
-The function will give a warning message if you use more than 5 cores.
+When using parallel processing, be careful how many cores you use. This can easily overuse RAM and crash the computer.
+Functions that allow parallel processing will give a warning message if you use more than 8 cores.
 }
 
 \section{{Disclaimer}}{
