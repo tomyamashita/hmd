@@ -35,3 +35,7 @@
 * Added start and end times to flagAssignment and flagRemoval
 * Speed and efficiency improvements to classifyHMD, especially relating to initial data loading
 
+### Version 0.0.0.7 (2026-09-17)
+* Additional fixes to classifyHMD to fix bugs created by previous changes
+
+

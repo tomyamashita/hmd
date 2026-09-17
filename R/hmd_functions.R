@@ -767,22 +767,22 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
   # Check if spatial data prep has already been completed
   if(prep.data){
     # Load in vector data
-    sa <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "sa")
-    sa_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "sa_prj")
-    bbox <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "bbox")
-    bbox_buffer <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "bbox_buffer")
-    main_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "main_prj")
-    ntd_local_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "ntd_local_prj")
-    ntd_trails_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "ntd_trails_prj")
-    usfs_local_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "usfs_local_prj")
-    usfs_trails_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "usfs_trails_prj")
-    rail_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "railroad_prj")
-    bldg_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "bldg_prj")
-    water_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "water_prj")
-    celltowers_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "celltowers_prj")
-    fedlands_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "fedlands_prj")
-    pad_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "pad_prj")
-    urban_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "urban_prj")
+    sa <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "sa", quiet = TRUE)
+    sa_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "sa_prj", quiet = TRUE)
+    bbox <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "bbox", quiet = TRUE)
+    bbox_buffer <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "bbox_buffer", quiet = TRUE)
+    main_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "main_prj", quiet = TRUE)
+    ntd_local_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "ntd_local_prj", quiet = TRUE)
+    ntd_trails_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "ntd_trails_prj", quiet = TRUE)
+    usfs_local_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "usfs_local_prj", quiet = TRUE)
+    usfs_trails_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "usfs_trails_prj", quiet = TRUE)
+    rail_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "railroad_prj", quiet = TRUE)
+    bldg_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "bldg_prj", quiet = TRUE)
+    water_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "water_prj", quiet = TRUE)
+    celltowers_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "celltowers_prj", quiet = TRUE)
+    fedlands_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "fedlands_prj", quiet = TRUE)
+    pad_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "pad_prj", quiet = TRUE)
+    urban_prj <- sf::st_read(dsn = file.path(gpkg.folder, "studyarea_tiled_data.gpkg"), layer = "urban_prj", quiet = TRUE)
 
     # Load in raster data
     elev_prj <- terra::rast(file.path(gpkg.folder, "studyarea_tiled_DEM.tiff"))
@@ -866,8 +866,8 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
       }))
       x2 <- sf::st_transform(x1, crs = coord.sys)
       colnames(x2)[-ncol(x2)] <- paste(colnames(x2)[-ncol(x2)], "_", n, sep = "")
-      colnames(x2)[ncol(x2)] <- "geometry"
-      sf::st_geometry(x2) <- "geometry"
+      #colnames(x2)[ncol(x2)] <- "geometry"
+      #sf::st_geometry(x2) <- "geometry"
       return(x2)
       rm(n, x1, x2)
       #rm(x)
@@ -995,7 +995,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
   if(pp == TRUE){
     message("Parallel Processing Enabled")
     if(is.null(cores.left)){
-      cores.left <- 10
+      cores.left <- 20
     }else{
       cores.left <- tryCatch(as.numeric(cores.left),
                              error = function(e){message("There was an error coercing cores.left to a number. The default of 2 cores are not utilized"); return(2)},
@@ -1004,10 +1004,14 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
     if(parallel::detectCores() - cores.left > 5){
       message("Beware, using more than 5 cores is likely to overuse the computer's RAM...")
     }
+    if(parallel::detectCores() - cores.left <= 0){
+      message("You are reserving more cores than are available. Using only 2 cores")
+      cores.left <- parallel::detectCores() - 2
+    }
     cl1 <- parallel::makeCluster(parallel::detectCores() - cores.left, outfile = "out.txt")
     parallel::clusterExport(cl1, varlist = c("hmd.clean.files", "hmd.class.files", "bbox_buffer",
-                                             "main_prj", "ntd_local_prj", "ntd_trail_prj",
-                                             "usfs_local_prj", "usfs_trail_prj",
+                                             "main_prj", "ntd_local_prj", "ntd_trails_prj",
+                                             "usfs_local_prj", "usfs_trails_prj",
                                              "rail_prj", "bldg_prj", "water_prj", "urban_prj",
                                              "celltowers_prj", "fedlands_prj", "landstatus_prj", "elev_prj", "snow_prj"),
                             envir = environment())
@@ -1087,8 +1091,10 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
         near <- sf::st_nearest_feature(x = x, y = feature)
         dist <- sf::st_distance(x = x, y = feature[near,], by_element = TRUE)
         out <- data.table::data.table(OID = x$OID, sf::st_drop_geometry(feature)[near,], near, units::set_units(dist, "meter"))
-        colnames(out) <- c("OID", colnames(feature)[!grepl("geometry", colnames(feature))], paste(c("near", "dist"), "_", n, sep = ""))
+        colnames(out) <- c("OID", colnames(feature)[!grepl("geom", colnames(feature))], paste(c("near", "dist"), "_", n, sep = ""))
         return(out)
+        rm(near, dist, out)
+        #rm(x, n, feature)
       }
 
       # Convert to spatial file
@@ -1152,35 +1158,30 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
         ## Determine if location is close to each infrastructure
         hmd_ths <- do.call(cbind, lapply(1:length(thresholds), function(j){
           n <- names(thresholds)[j]
-          th <- units::drop_units(thresholds[[j]])
-
-          if(is.null(th)){
-            in.th <- FALSE
-          }else{
-            if(n %in% c("local", "trail")){
-              if(use.source == "both"){
-                n.col <- paste("dist_", c("ntd", "usfs"), "_", n, sep = "")
-                arg.col <- paste("dist_", n, sep = "")
-              }else{
-                n.col <- paste("dist_", use.source, "_", n, sep = "")
-                arg.col <- n.col
-              }
-              DT1 <- switch(arg.col,
-                            "dist_local" = data.table::data.table(dist_ntd_local[,.(dist_ntd_local)], dist_usfs_local[,.(dist_usfs_local)]),
-                            "dist_trail" = data.table::data.table(dist_ntd_trail[,.(dist_ntd_trail)], dist_usfs_trail[,.(dist_usfs_trail)]))
+          th <- ifelse(is.null(thresholds[[j]]), NA, units::drop_units(thresholds[[j]]))
+          if(n %in% c("local", "trail")){
+            if(use.source == "both"){
+              n.col <- paste("dist_", c("ntd", "usfs"), "_", n, sep = "")
+              arg.col <- paste("dist_", n, sep = "")
             }else{
-              n.col <- paste("dist_", n, sep = "")
+              n.col <- paste("dist_", use.source, "_", n, sep = "")
               arg.col <- n.col
             }
-            d1 <- switch(arg.col,
-                         "dist_bldg" = units::drop_units(dist_bldg[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
-                         "dist_main" = units::drop_units(dist_main[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
-                         "dist_railr" = units::drop_units(dist_rail[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
-                         "dist_local" = units::drop_units(DT1[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
-                         "dist_trail" = units::drop_units(DT1[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]))
-            in.th <- d1[,lapply(.SD, function(x){x <= th}), .SDcols = "DIST"]
-            colnames(in.th) <- n
+            DT1 <- switch(arg.col,
+                          "dist_local" = data.table::data.table(dist_ntd_local[,.(dist_ntd_local)], dist_usfs_local[,.(dist_usfs_local)]),
+                          "dist_trail" = data.table::data.table(dist_ntd_trail[,.(dist_ntd_trail)], dist_usfs_trail[,.(dist_usfs_trail)]))
+          }else{
+            n.col <- paste("dist_", n, sep = "")
+            arg.col <- n.col
           }
+          d1 <- switch(arg.col,
+                       "dist_bldg" = units::drop_units(dist_bldg[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
+                       "dist_main" = units::drop_units(dist_main[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
+                       "dist_railr" = units::drop_units(dist_rail[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
+                       "dist_local" = units::drop_units(DT1[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
+                       "dist_trail" = units::drop_units(DT1[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]))
+          in.th <- d1[,lapply(.SD, function(x){ifelse(is.na(x <= th), FALSE, x <= th)}), .SDcols = "DIST"]
+          colnames(in.th) <- n
           return(in.th)
           rm(n, th, n.col, arg.col, in.th, DT1, d1)
           #rm(j)

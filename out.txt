@@ -1,0 +1,75 @@
+starting worker pid=28640 on localhost:11407 at 09:42:15.150
+starting worker pid=24764 on localhost:11407 at 09:42:15.281
+starting worker pid=20212 on localhost:11407 at 09:42:15.405
+starting worker pid=25904 on localhost:11407 at 09:42:15.527
+starting worker pid=8836 on localhost:11407 at 09:42:15.662
+starting worker pid=3684 on localhost:11407 at 09:42:15.781
+starting worker pid=19344 on localhost:11407 at 09:42:15.893
+starting worker pid=2580 on localhost:11407 at 09:42:16.004
+starting worker pid=26968 on localhost:11407 at 09:42:16.111
+starting worker pid=12296 on localhost:11407 at 09:42:16.225
+starting worker pid=24620 on localhost:11407 at 09:42:16.340
+starting worker pid=18772 on localhost:11407 at 09:42:16.452
+starting worker pid=10284 on localhost:11407 at 09:42:40.762
+starting worker pid=22116 on localhost:11407 at 09:42:40.865
+starting worker pid=4880 on localhost:11407 at 09:42:40.966
+starting worker pid=10956 on localhost:11407 at 09:42:41.069
+starting worker pid=20716 on localhost:11407 at 09:42:41.170
+starting worker pid=24944 on localhost:11407 at 09:42:41.273
+starting worker pid=9388 on localhost:11407 at 09:42:41.378
+starting worker pid=27876 on localhost:11407 at 09:42:41.482
+starting worker pid=2544 on localhost:11407 at 09:42:41.587
+starting worker pid=23340 on localhost:11407 at 09:42:41.696
+starting worker pid=26720 on localhost:11407 at 09:42:41.802
+starting worker pid=2836 on localhost:11407 at 09:42:41.904
+Error in unserialize(node$con) : unknown input format
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
+Execution halted
+Execution halted
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
+Execution halted
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
+Execution halted
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
+Error in unserialize(node$con) : error reading from connection
+Calls: <Anonymous> ... doTryCatch -> recvData -> recvData.SOCKnode -> unserialize
+Execution halted
