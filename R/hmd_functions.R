@@ -1280,7 +1280,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
         if(nrow(chunks) == 1){
           return(h8)
         }else{
-          file.out <- file.path("tempDir_Spatial", paste("Chunk_", i, ".RDS", sep = ""))
+          file.out <- file.path("tempDir_Spatial", paste("File_", h, "_Chunk_", i, ".RDS", sep = ""))
           saveRDS(h8, file = file.out)
           return(file.out)
         }
@@ -1310,11 +1310,6 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
       ## Save output
       saveRDS(h9, out.path)
 
-      ## Delete temporary directory
-      if(nrow(chunks) > 1){
-        fs::dir_delete("tempDir_Spatial")
-      }
-
       # Close the function
       return(out.path)
     }
@@ -1325,6 +1320,11 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
   # Stop parallel processing
   if(pp == TRUE){
     parallel::stopCluster(cl1)
+  }
+
+  ## Delete temporary directory (if it was created)
+  if(fs::dir_exists("tempDir_Spatial")){
+    fs::dir_delete("tempDir_Spatial")
   }
 
   # Convert the outputs to a string
