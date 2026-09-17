@@ -40,3 +40,7 @@
 * Fixes to enable parallel processing
 * Added additional text to diagnose parallel processing issues (these will be removed in a future update)
 
+### Version 0.0.0.8 (2026-09-18)
+* The parallel processing issue may be related to how rasters are handled in the terra package and its interaction with parallel processing. 
+* As such, raster loading is added inside the parallel processing loop. 
+

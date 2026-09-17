@@ -1013,7 +1013,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
                                              "main_prj", "ntd_local_prj", "ntd_trails_prj",
                                              "usfs_local_prj", "usfs_trails_prj",
                                              "rail_prj", "bldg_prj", "water_prj", "urban_prj",
-                                             "celltowers_prj", "fedlands_prj", "pad_prj", "elev_prj", "snow_prj"),
+                                             "celltowers_prj", "fedlands_prj", "pad_prj", "gpkg.folder"),
                             envir = environment())
   }else{
     cl1 <- NULL
@@ -1218,6 +1218,16 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
           int.pad <- sf::st_intersects(x = h6, y = pad_prj)
 
           message("pad done...")
+
+          # Rasters need to be loaded in when parallel processing is enabled due to issues with how memory is allocated in terra package
+          if(pp == TRUE){
+            elev_prj <- terra::rast(file.path(gpkg.folder, "studyarea_tiled_DEM.tiff"))
+            temp.snow.files <- fs::dir_ls(file.path(gpkg.folder, "studyarea_tiled_snow"), type = "file")
+            snow_prj <- pbapply::pblapply(temp.snow.files, terra::rast)
+            names(snow_prj) <- fs::path_ext_remove(basename(temp.snow.files))
+            rm(temp.snow.files)
+          }
+
           # Elevation metrics
           ## Extract raster values for each HMD point
           elev1 <- data.table::as.data.table(terra::extract(elev_prj, h6))
