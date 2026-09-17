@@ -1258,9 +1258,10 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
           })
           ## Re-combine HMD data
           h7.sc <- data.table::rbindlist(h6.sc)
+          h7.adds[1:5,]
 
           # Add data to full dataset
-          h7.adds[1:5,]
+          message("Additional Calculations complete. Merging data and saving output...")
           h8 <- data.table::mergelist(l = list(h7,
                                                dist_bldg, dist_main, dist_rail,
                                                dist_ntd_local, dist_usfs_local,
