@@ -38,4 +38,5 @@
 ### Version 0.0.0.7 (2026-09-17)
 * Additional fixes to classifyHMD to fix bugs created by previous changes
 * Fixes to enable parallel processing
+* Added additional text to diagnose parallel processing issues (these will be removed in a future update)
 

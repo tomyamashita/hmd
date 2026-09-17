@@ -1198,26 +1198,33 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
           ## Calculate whether HMD point intersects waterbody
           int.water <- sf::st_intersects(x = h6, y = water_prj)
 
+          message("Water done...")
           # In an urban area
           ## Calculate whether HMD point intersects an urban area
           int.urban <- sf::st_intersects(x = h6, y = urban_prj)
 
+          message("urban done...")
           # Calculate distance to nearest cell tower
           dist.cell <- distToFeature(x = h6, n = "cell", feature = celltowers_prj)
 
+          message("Cell done...")
           # On federal lands
           ## Calculate whether HMD point intersects federal lands
           int.fed <- sf::st_intersects(x = h6, y = fedlands_prj)
 
+          message("federal lands done...")
           # Special Management area
           ## Calculate whether HMD point intersects protected areas
           int.pad <- sf::st_intersects(x = h6, y = pad_prj)
 
+          message("pad done...")
           # Elevation metrics
           ## Extract raster values for each HMD point
           elev1 <- data.table::as.data.table(terra::extract(elev_prj, h6))
           colnames(elev1)[1] <- "OID"
           elev1[1:5,]
+
+          message("elevation done...")
 
           # Add new columns
           h7.adds <- data.table::data.table(OID = h7$OID,
