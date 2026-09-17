@@ -1013,7 +1013,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
                                              "main_prj", "ntd_local_prj", "ntd_trails_prj",
                                              "usfs_local_prj", "usfs_trails_prj",
                                              "rail_prj", "bldg_prj", "water_prj", "urban_prj",
-                                             "celltowers_prj", "fedlands_prj", "landstatus_prj", "elev_prj", "snow_prj"),
+                                             "celltowers_prj", "fedlands_prj", "pad_prj", "elev_prj", "snow_prj"),
                             envir = environment())
   }else{
     cl1 <- NULL
