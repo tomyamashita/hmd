@@ -56,7 +56,7 @@ Additionally, the functions in this package likely will not work properly if thi
 }
 }
 \seealso{
-\code{\link{flagRemoval}}, \code{\link{classifyHMD}}
+\code{\link{flagRemoval}}, \code{\link{classifyHMD}}, \code{\link{summarizeHMD}}
 }
 \concept{HMD}
 \keyword{files}

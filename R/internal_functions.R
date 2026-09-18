@@ -6,6 +6,8 @@
 ### loadGPKG()
 ### loadVector()
 ### loadRast()
+### numericFun()
+### factorFun()
 
 
 #-------------------------------------------------------------------------------
@@ -231,5 +233,113 @@ loadRast <- function(x, name){
 
 #-------------------------------------------------------------------------------
 
+# Summarize numeric data (Added 2026-09-18) ####
+##' @description Summarize numeric data by specified columns
+##'
+##' @title Summarize numeric data
+##'
+##' @param f character. Which type of numeric summary should be created.
+##' This should be one of c("N", "mn", "min", "q01", "q05", "q25", "med", "q75", "q95" "q99", "max", "sd", "first" "last", "cum_dist", "cnt").
+##' @param ds data.table. The data.table that should be summarized.
+##' @param cols character. Which columns should be summarized.
+##' @param by.cols character. Which columns should be used for grouping data.
+##'
+##' @details This function is intended to be used within the summarizeHMD function. It likely works standalone but is untested.
+##'
+##' @returns A data.table containing the by.cols and summarized cols
+##'
+##' @inheritSection flagAssignment {Disclaimer}
+##'
+##' @importFrom data.table setnames
+##'
+##' @keywords manip
+##'
+##' @concept hmd
+##' @concept summary
+##'
+##' @export
+##'
+##' @examples \dontrun{
+##' ## No example right now
+##' }
+numSummary <- function(f, ds, cols, by.cols = sort.cols){
+  #f <- c("N", "mn", "med", "sd", "first", "last")
+  out <- switch(f,
+                N = ds[,.N, by = by.cols],
+                mn = ds[,lapply(.SD, mean, na.rm = TRUE), by = by.cols, .SDcols = cols],
+                min = ds[,lapply(.SD, min, na.rm = TRUE), by = by.cols, .SDcols = cols],
+                q01 = ds[,lapply(.SD, quantile, probs = 0.01, na.rm = TRUE), by = by.cols, .SDcols = cols],
+                q05 = ds[,lapply(.SD, quantile, probs = 0.05, na.rm = TRUE), by = by.cols, .SDcols = cols],
+                q25 = ds[,lapply(.SD, quantile, probs = 0.25, na.rm = TRUE), by = by.cols, .SDcols = cols],
+                med = ds[,lapply(.SD, median), by = by.cols, .SDcols = cols],
+                q75 = ds[,lapply(.SD, quantile, probs = 0.75, na.rm = TRUE), by = by.cols, .SDcols = cols],
+                q95 = ds[,lapply(.SD, quantile, probs = 0.95, na.rm = TRUE), by = by.cols, .SDcols = cols],
+                q99 = ds[,lapply(.SD, quantile, probs = 0.99, na.rm = TRUE), by = by.cols, .SDcols = cols],
+                max = ds[,lapply(.SD, max, na.rm = TRUE), by = by.cols, .SDcols = cols],
+                sd = ds[,lapply(.SD, sd, na.rm = TRUE), by = by.cols, .SDcols = cols],
+                first = ds[,lapply(.SD, head, n = 1), by = by.cols, .SDcols = cols],
+                last = ds[,lapply(.SD, tail, n = 1), by = by.cols, .SDcols = cols],
+                cum_dist = ds[,lapply(.SD, sum, na.rm = TRUE), by = by.cols, .SDcols = cols],
+                cnt = ds[,lapply(.SD, sum), by = by.cols, .SDcols = cols]
+  )
+  if(f == "N"){
+    data.table::setnames(out, "N", "n_other")
+  }else if(f == "cum_dist"){
+    data.table::setnames(out, cols, "cum_dist")
+  }else if(f == "cnt"){
+    NULL
+  }else{
+    data.table::setnames(out, cols, paste(cols, "_", f, sep = ""))
+  }
+  return(out)
+}
+
+
+#-------------------------------------------------------------------------------
+
+##' @description Summarize factor data by specified columns
+##'
+##' @title Summarize factor data
+##'
+##' @param f character. Column name of the factor column that should be summarized.
+##' @param ds data.table. The data.table that should be summarized.
+##' @param by.cols character. Which columns should be used for grouping data.
+##'
+##' @details This function is intended to be used within the summarizeHMD function. It likely works standalone but is untested.
+##'
+##' @returns A data.table containing the by.cols and columns named after the factor of choice
+##'
+##' @inheritSection flagAssignment {Disclaimer}
+##'
+##' @importFrom data.table setnames dcast
+##'
+##' @keywords manip
+##'
+##' @concept hmd
+##' @concept summary
+##'
+##' @export
+##'
+##' @examples \dontrun{
+##' ## No example right now
+##' }
+factSummary <- function(f, ds, by.cols = sort.cols){
+  t1 <- ds[,.N, by = c(by.cols, f)]
+  colnames(t1)[colnames(t1) %in% f] <- "f"
+  cols.old <- as.character(unique(t1$f))
+  if(any(is.na(cols.old))){
+    cols.old[is.na(cols.old)] <- "NA"
+  }
+  cols.new <- paste(f, "_", cols.old, sep = "")
+  t2 <- data.table::dcast(t1, ... ~ f, value.var = "N", fill = 0)
+  data.table::setnames(t2, old = cols.old, new = cols.new)
+
+  t3 <- merge(ds[,.N, by = by.cols], t2)
+  t4 <- t3[,lapply(.SD, function(x){x/N}), by = by.cols, .SDcols = cols.new]
+  data.table::setnames(t4, old = cols.new, new = paste(cols.new, "_prop", sep = ""))
+  t5 <- merge(t2, t4)
+  return(t5)
+  rm(t1, t2, t3, t4, t5, cols.old, cols.new)
+}
 
 

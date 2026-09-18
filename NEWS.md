@@ -40,12 +40,14 @@
 * Fixes to enable parallel processing
 * Added additional text to diagnose parallel processing issues (these will be removed in a future update)
 
-### Version 0.0.0.8 (2026-09-18)
+### Version 0.0.0.8 (2026-09-17)
 * The parallel processing issue may be related to how rasters are handled in the terra package and its interaction with parallel processing. 
 * As such, raster loading is added inside the parallel processing loop. 
 * This fixed the issues. Removing additional text to diagnose issues and updating parallel processing documentation to state that it is now possible for up to 8 cores
 * Added a file moving code to classifyHMD to remove cleaned files to classified folder
 * Moved classifyHMD's internal functions outside of classifyHMD. This may break the function. Will need to check when needing to run again. 
 
-
-
+### Version 0.0.0.9 (2026-09-18) 
+* Added the summarizeHMD function and associated documentation
+* summarizeHMD requires some additional modification including adding OIDs to summarized data.
+* Added summarizeHMD's internal functions as standalone functions. They are untested but should work within the standard pipeline. 

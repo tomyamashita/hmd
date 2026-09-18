@@ -73,6 +73,7 @@ Additional data currently being calculated is: the land manager, protected area 
 \note{
 While parallel processing is possible, this is not recommended for this function.
 Even for moderately sized HMD files, distance calculations are very memory intensive and can easily over-use the system memory.
+Since Version 0.0.0.8, this function can run in parallel but you should not run this on more than 8 cores.
 }
 \section{{Warning}}{
 
@@ -93,8 +94,8 @@ Additionally, the functions in this package likely will not work properly if thi
 }
 }
 \seealso{
-\code{\link{flagAssignment}}, \code{\link{flagRemoval}} for functions in HMD processing pipeline.
-This function uses the \code{\link{trackFun}} and \code{\link{distToFeature}} functions.
+\code{\link{flagAssignment}}, \code{\link{flagRemoval}}, \code{\link{summarizeHMD}} for functions in HMD processing pipeline.
+This function uses the \code{\link{trackFun}}, \code{\link{distToFeature}}, \code{\link{loadGPKG}}, \code{\link{loadVector}}, \code{\link{loadRast}} functions.
 }
 \concept{Classification}
 \concept{HMD}

@@ -4,6 +4,7 @@
 ### flagAssignment()
 ### flagRemoval()
 ### classifyHMD()
+### summarizeHMD()
 ### trackFun()
 ### flaggedToRaw()
 ### splitByMonth()
@@ -40,7 +41,7 @@
 ##' The functions in this package are in active development and likely has bugs.
 ##' Additionally, the functions in this package likely will not work properly if this package was not used to create the data.
 ##'
-##' @seealso \code{\link{flagRemoval}}, \code{\link{classifyHMD}}
+##' @seealso \code{\link{flagRemoval}}, \code{\link{classifyHMD}}, \code{\link{summarizeHMD}}
 ##'
 ##' @importFrom fs dir_exists dir_ls path_ext_remove dir_create file_move
 ##' @importFrom parallel detectCores makeCluster clusterExport stopCluster
@@ -288,7 +289,7 @@ flagAssignment <- function(in.dir, out.dir, move.file = TRUE, pp = FALSE, cores.
 ##' @inheritSection flagAssignment {Warning}
 ##' @inheritSection flagAssignment {Disclaimer}
 ##'
-##' @seealso \code{\link{flagAssignment}}
+##' @seealso \code{\link{flagAssignment}}, \code{\link{classifyHMD}}, \code{\link{summarizeHMD}}
 ##'
 ##' @importFrom fs dir_ls dir_exists dir_create file_move
 ##' @importFrom parallel detectCores makeCluster clusterExport stopCluster
@@ -639,12 +640,13 @@ flagRemoval <- function(in.dir, out.dir, FF.remove = NULL, FF.suspect = NULL, me
 ##'
 ##' @note While parallel processing is possible, this is not recommended for this function.
 ##' Even for moderately sized HMD files, distance calculations are very memory intensive and can easily over-use the system memory.
+##' Since Version 0.0.0.8, this function can run in parallel but you should not run this on more than 8 cores.
 ##'
 ##' @inheritSection flagAssignment {Warning}
 ##' @inheritSection flagAssignment {Disclaimer}
 ##'
-##' @seealso \code{\link{flagAssignment}}, \code{\link{flagRemoval}} for functions in HMD processing pipeline.
-##' This function uses the \code{\link{trackFun}} and \code{\link{distToFeature}} functions.
+##' @seealso \code{\link{flagAssignment}}, \code{\link{flagRemoval}}, \code{\link{summarizeHMD}} for functions in HMD processing pipeline.
+##' This function uses the \code{\link{trackFun}}, \code{\link{distToFeature}}, \code{\link{loadGPKG}}, \code{\link{loadVector}}, \code{\link{loadRast}} functions.
 ##'
 ##' @importFrom data.table data.table as.data.table rbindlist mergelist
 ##' @importFrom fs dir_ls dir_exists path_ext_remove dir_create dir_delete
@@ -1325,6 +1327,228 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
      snow_days1, snow_days2, snow_dir2, use.source,
      loadGPKG, loadRast, loadVector)
   #rm(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, road.source, add.calcs, snowfraction, pp, cores.left)
+}
+
+
+#-------------------------------------------------------------------------------
+
+# Summarize HMD tracks by segment (Added 2026-09-18) ####
+##' @description Summarize tracks by different groups
+##'
+##' @title Summarize HMD tracks
+##'
+##' @param in.dir character. Directory containing the classified data to be summarized.
+##' @param out.dir  character. Directory where summarized data should be stored.
+##' @param in.name character. String indicating how the classified data is defined. This should typically be "classified".
+##' @param out.name character. String indicating what the summarized data should be called.
+##' @param sort.cols character. Which columns should be used to define the summaries.
+##' @param excl.type character. Which hmd.types should be excluded from the summaries. This defaults to c("bldg", "main", "rail").
+##' @param add.calcs character. Were additional columns created in \code{\link{classifyHMD}} and should they be included in this function.
+##'
+##' @inheritParams flagAssignment pp cores.left
+##'
+##' @details This function is intended to summarize classified HMD as created by the \code{\link{classifyHMD}} function.
+##' It summarizes data by user-selected columns as defined by the sort.cols argument. This should typically at minimum be grid (unique user ID) and day.
+##'
+##' @returns A list of file paths leading to the newly created summarized data
+##'
+##' @references \code{\link{flagAssignment}}, \code{\link{flagRemoval}}, \code{\link{classifyHMD}} for functions in the HMD processing pipeline.
+##' This function uses the \code{\link{numSummary}}, \code{\link{factSummary}} functions.
+##'
+##' @inheritSection flagAssignment {Warning}
+##' @inheritSection flagAssignment {Disclaimer}
+##'
+##' @importFrom fs dir_ls
+##' @importFrom parallel detectCores makeCluster clusterExport stopCluster
+##' @importFrom pbapply pblapply
+##' @importFrom sf st_drop_geometry
+##' @importFrom data.table setkeyv setnames dcast mergelist
+##' @importFrom units set_units
+##'
+##' @keywords manip
+##'
+##' @concept hmd
+##' @concept classification
+##'
+##' @export
+##'
+##' @examples \dontrun{
+##' ## No example right now
+##' }
+summarizeHMD <- function(in.dir, out.dir, in.name, out.name, sort.cols, excl.type = c("bldg", "main", "rail"), add.calcs = TRUE, pp = FALSE, cores.left = NULL){
+  #in.dir <- file.path("data_grizzly_update", "segment_mo")  # Directory containing the classified HMD
+  #out.dir <- file.path("data_grizzly_update", "summary")  # Directory containing the completed track data
+  #in.name <- "segment"
+  #out.name <- "summary"
+  #sort.cols <- c("grid", "day", "segment")
+  #excl.type <- c("bldg", "main", "rail")   # Which HMD.types should be excluded from further calculations
+  #add.calcs <- TRUE                         # Were the additional calculations done in the previous step?
+
+  # Pull up all the classified HMD folders
+  hmd.class.files <- fs::dir_ls(in.dir, type = "file", glob = paste("*_", in.name, "_*", sep = ""))
+
+  # Check if any files were found
+  if(length(hmd.class.files) == 0){
+    stop("There are no files in the in.dir. Is the in.name correct?")
+  }
+
+  # Set up parallel processing
+  if(pp == TRUE){
+    message("Parallel Processing Enabled")
+    if(is.null(cores.left)){
+      cores.left <- 20
+    }else{
+      cores.left <- tryCatch(as.numeric(cores.left),
+                             error = function(e){message("There was an error coercing cores.left to a number. The default of 2 cores are not utilized"); return(2)},
+                             warning = function(w){message("Could not coerce cores.left to a number. The default of 2 cores are not utilized"); return(2)})
+    }
+    if(parallel::detectCores() - cores.left > 8){
+      message("Using more than 8 cores is likely to overuse the computer's RAM.")
+    }
+    cl1 <- parallel::makeCluster(parallel::detectCores() - cores.left, outfile = "out.txt")
+    parallel::clusterExport(cl1, varlist = c("hmd.class.files", "in.dir", "out.dir", "in.name", "out.name",
+                                             "sort.cols", "excl.type", "add.calcs"),
+                            envir = environment())
+  }else{
+    cl1 <- NULL
+  }
+
+  # Summarize data by track
+  hmd3 <- pbapply::pblapply(1:length(hmd.class.files), cl = cl1, function(i){
+    ## Select 1 file
+    i1 <- hmd.class.files[i]
+    ## Figure out its name
+    n <- sub(paste("_", in.name, ".*", sep = ""), "", basename(hmd.class.files)[i])
+    message("Starting ", n, " at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ". This is ", i, " of ", length(hmd.class.files))
+    ## Identify where its going
+    out.path <- file.path(out.dir, paste(n, "_", out.name, "_", format(Sys.Date(), "%Y%m%d"), ".RDS", sep = ""))
+
+    # Check if output already exists
+    ext <- fs::dir_ls(path = out.dir, type = "file", glob = paste("*", n, "_", out.name, "_", "*", sep = ""))
+
+    if(length(ext) > 0){
+      return(ext)
+    }else{
+      # Load in data
+      i2 <- readRDS(i1)
+
+      # Calculate infrastructure-related metrics
+      ## Drop geometry (h6 and h7 are identical except h7 is not an sf object)
+      if(any(grepl("sf", class(i2)))){
+        i3 <- sf::st_drop_geometry(i2)
+      }else{
+        i3 <- i2
+      }
+      data.table::setkeyv(i3, cols = sort.cols)
+      #i3[1:5,]
+
+      ## We only care about points on local roads, trails, and dispersed
+      #unique(i3$hmd.type)
+      #table(i3$hmd.type)
+      message("Excluding ", paste(excl.type, collapse = ", "), " HMD locations from calculations of track summaries.")
+      i4 <- i3[!(hmd.type %in% excl.type),]
+
+      ## Check if there is any data left and skip if not
+      if(nrow(i4) == 0){
+        message("Skipping ", n, ". Data has no rows...")
+        return(NULL)
+      }else{
+        ## Check for and remove duplicate time stamps for an individual track
+        dup <- duplicated(i4, by = c(sort.cols, "ts_UTC"))
+        message("Removing ", round(sum(dup)/nrow(i4)*100, digits = 2), "% of locations due to duplicate timestamps.")
+        i5 <- i4[!dup,]
+        i5[1:5,]
+
+        # Summarize distance to variables and calculate track-level metrics
+        ## Columns for factor summaries
+        cols.fac <- c("hmd.type",
+                      "type_ntd_local", "surface_ntd_local",
+                      "type_usfs_local", "surface_usfs_local", "season_usfs_local",
+                      "type_ntd_trail", "season_ntd_trail", "use_ntd_trail",
+                      "type_usfs_trail", "season_usfs_trail", "use_usfs_trail")
+        ## Columns for numeric summaries
+        cols.num <- c("dist_bldg", "dist_main", "dist_railr", "dist_ntd_local", "dist_usfs_local", "dist_ntd_trail", "dist_usfs_trail",
+                      "difft_sec", "stepl_m", "speed_kmh")
+
+
+        ## Create summaries
+        dist_num <- c(lapply(c("N"), numSummary, ds = i5, cols = NA),
+                      lapply(c("mn", "sd", "min", "q25", "med", "q75", "q95", "q99", "max"), numSummary, ds = i5, cols = cols.num),
+                      lapply(c("first", "last"), numSummary, ds = i5, cols = c("X", "Y")),
+                      lapply(c("cum_dist"), numSummary, ds = i5, cols = "stepl_m"))
+        dist_fac <- lapply(cols.fac, factSummary, ds = i5)
+
+        ## Merge summary outputs
+        dist_sum <- data.table::mergelist(l = c(dist_num, dist_fac))
+
+        ## Calculate total distance and tortuosity
+        dist_sum$tot_dist <- with(dist_sum, units::set_units(sqrt((X_last - X_first)^2 + (Y_last - Y_first)^2), "meter"))
+        dist_sum$tortuosity <- as.numeric(with(dist_sum, tot_dist/cum_dist))
+        dist_sum[1:2,]
+
+        # Track-level metrics calculations (from "amt" package)
+        # tortuosity = (total distance) / (cumulative distance)
+        # (total distance) = (euclidean distance between first and last points)
+        # (cumulative distance) = sum(step lengths) [this was the dist_traveled column from previous method]
+        # (summarize sampling rate) = data.frame(summary(difft_sec), sd = sd(difft_sec), n = length(difft_sec), unit = "sec")
+
+        # Additional metrics
+        if(add.calcs == TRUE){
+          # Deal with downstream snow.cover issues
+          if(any(grepl("snowcover", colnames(i5)))){
+            colnames(i5)[which(colnames(i5) == "snowcover")] <- "snow.cover"
+          }
+          i5$snow.cover <- as.character(i5$snow.cover)
+
+          # Run calculations
+          cols.add.cnt <- c("in.water", "in.urban")
+          cols.add.fac <- c("land.type", "pad.type", "snow.cover")
+          cols.add.num <- c("dist_cell", "elev_m", "tri", "slope", "aspect")
+          add_num <- c(lapply(c("N"), numericFun, ds = i5, cols = NA),
+                       lapply(c("cnt"), numericFun, ds = i5, cols = cols.add.cnt),
+                       lapply(c("mn", "med", "sd"), numericFun, ds = i5, cols = cols.add.num))
+          add_fac <- lapply(cols.add.fac, factorFun, ds = i5)
+
+          add_sum <- data.table::mergelist(l = c(add_num, add_fac))
+          add_sum$water_prop <- add_sum$in.water/add_sum$n_other
+          add_sum$urban_prop <- add_sum$in.urban/add_sum$n_other
+          add_sum[1:2,]
+
+          # Merge data with additional calculations.
+          track_all <- merge(dist_sum, add_sum[,!c("n_other")])
+        }else{
+          track_all <- dist_sum
+        }
+
+        # Merge data and save
+        track_all[1:2,]
+
+        # Create unique identifier for this summary
+        ## THIS NEEDS TO BE DONE LIKE WITH flagAssignment ##
+        #track_all[,paste("OID", paste(sort.cols, collapse = ""), sep = ".") := 1:length(track_all)]
+
+        # Save the output
+        saveRDS(track_all, file = out.path)
+
+        return(out.path)
+      }
+      rm(i1, n, out.path, ext, i2, i3, dup, i4, i5, dist_num, dist_fac, dist_sum, add_num, add_fac, add_sum, track_all, cols.add.cnt, cols.add.fac, cols.add.num, cols.fac, cols.num, factorFun, mergeMultFun, numericFun)
+      #rm(i)
+    }
+  })
+
+  # Stop parallel processing
+  if(pp == TRUE){
+    parallel::stopCluster(cl1)
+  }
+
+  # Combine output files
+  hmd4 <- do.call(c, hmd3)
+
+  # Close the function
+  return(hmd4)
+  rm(hmd.class.files, cl1, hmd3, hmd4)
+  #rm(in.dir, out.dir, in.name, out.name, sort.cols, excl.type, add.calcs, pp, cores.left)
 }
 
 
