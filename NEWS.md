@@ -57,5 +57,5 @@
 * Updated documentation to properly link to external functions. 
 * Updated internal function calculateIndices to allow index calculation for summaries to be used within summarizeHMD. 
 * Tested and fixed bugs in summarizeHMD internal functions. 
-
+* Added the combineIndices function to create a bridging file for points and track data. 
 

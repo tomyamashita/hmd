@@ -128,4 +128,75 @@ createBldgTiles <- function(url = "https://minedbuildings.z5.web.core.windows.ne
 
 #-------------------------------------------------------------------------------
 
+# Create linked indices between points and summaries (Added 2026-09-22) ####
+##' @description Combine object IDs from point data and track data based on the columns used for track-level summaries
+##'
+##' @title Combine Point and Track OIDs
+##'
+##' @param in.pt character. File paths to the point data
+##' @param in.tk character. File paths to the track data. This should be the same length as in.pt.
+##' @param by character. Character vector of column names used to summarize the track data.
+##' @param out.type character. Should the output be a list of data.tables by file or a single combined file (dt)
+##' @param verbose logical. Should the input tables be printed
+##'
+##' @details This function does not confirm that point and track files are paired other than by the merge.
+##' This could produce hidden errors if point-level and track-level data are not in the same order
+##'
+##' @return either a list or data.table containing the by columns and the OID.POINT and OID.TRACK columns
+##'
+##' @inheritSection flagAssignment {Disclaimer}
+##'
+##' @importFrom data.table data.table rbindlist
+##' @importFrom pbapply pblapply
+##'
+##' @keywords manip
+##'
+##' @concept hmd
+##' @concept data organization
+##'
+##' @export
+##'
+##' @examples \dontrun{
+##' ## No example right now
+##' }
+combineIndices <- function(in.pt, in.tk, by, out.type = "list", verbose = TRUE){
+  #in.pt <- fs::dir_ls(file.path("E:", "HMD", "Classification_Rec", "data_HMD_v3", "classify"))
+  #in.tk <- fs::dir_ls(file.path("E:", "HMD", "Classification_Rec", "data_HMD_v3", "summary_gridday"))
+  #by <- c("grid", "day")
+
+  if(length(in.pt) != length(in.tk)){
+    stop("The number of files in the point data is different from the number of files in the summarized tracks.")
+  }
+
+  fs1 <- data.table::data.table(pts = in.pt, tks = in.tk)
+
+  fs2 <- pbapply::pblapply(1:nrow(fs1), function(i){
+    x1 <- readRDS(fs1$pts[i])[,.SD, .SDcols = c(by, "OID.POINT")]
+    x2 <- readRDS(fs1$tks[i])[,.SD, .SDcols = c(by, "OID.track")]
+    x3 <- merge(x1, x2, by = by)
+    return(x3)
+  })
+
+  if(out.type == "dt"){
+    fs3 <- data.table::rbindlist(fs2)
+  }else if(out.type == "list"){
+    fs3 <- fs2
+  }else{
+    message("You specified an invalid out.type. Choose one of c('dt', 'list').")
+    fs3 <- fs2
+  }
+
+  if(verbose == TRUE){
+    message("The files used to link OIDs are: ")
+    print(fs1)
+  }
+
+  return(fs3)
+  rm(fs1, fs2, fs3)
+  #rm(in.pt, in.tk, by, out.type)
+}
+
+
+#-------------------------------------------------------------------------------
+
 

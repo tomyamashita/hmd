@@ -2,6 +2,7 @@
 
 export(calculateIndices)
 export(classifyHMD)
+export(combineIndices)
 export(createBldgTiles)
 export(distToFeature)
 export(factSummary)
