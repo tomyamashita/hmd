@@ -20,7 +20,7 @@ A data.table containing the by.cols and columns named after the factor of choice
 Summarize factor data by specified columns
 }
 \details{
-This function is intended to be used within the summarizeHMD function. It likely works standalone but is untested.
+This function is intended to be used within the \code{\link{summarizeHMD}} function. It likely works standalone but is untested.
 }
 \section{{Disclaimer}}{
 

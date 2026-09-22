@@ -64,11 +64,11 @@ distToFeature <- function(x, n, feature){
 ##' @param in.files. character vector of file paths to saved RDS files containing data.tables or data.frames.
 ##' @param starting. Numeric. What should the starting value of the index be? Defaults to 1
 ##'
-##' @details This function is standalone but intended to be used within the \code{\link{flagRemoval}} as a way to create a unique OID that starts at the beginning of the function.
+##' @details This function is standalone but intended to be used within the \code{\link{flagAssignment}} as a way to create a unique OID that starts at the beginning of the function.
 ##'
 ##' @returns data.table with index number of the in.files, the number of rows in each file, the starting index number, and ending index number
 ##'
-##' @references \code{\link{flagAssignment}}
+##' @references \code{\link{flagAssignment}} \code{\link{summarizeHMD}}
 ##'
 ##' @inheritSection flagAssignment {Disclaimer}
 ##'
@@ -84,10 +84,19 @@ distToFeature <- function(x, n, feature){
 ##' @examples \dontrun{
 ##' ## No example right now
 ##' }
-calculateIndices <- function(in.files, starting = 1){
+calculateIndices <- function(in.files, by = NULL, starting = 1){
   #in.files <- files.raw
+  #by <- c("grid", "day")
 
-  f.rows <- data.table::data.table(index = 1:length(in.files), rows = sapply(in.files, function(x){nrow(readRDS(x))}))
+  f.rows <- data.table::data.table(index = 1:length(in.files), rows = sapply(in.files, function(x){
+    x1 <- readRDS(x)
+    if(is.null(by)){
+      return(nrow(x1))
+    }else{
+      x2 <- x1[,.N, by = by]
+      return(nrow(x2))
+    }
+  }))
   f.rows[,`:=` (OID.start = NA,
                 OID.end = cumsum(rows))]
   f.rows[,`:=` (OID.start = data.table::shift(OID.end, n = 1, fill = 0, type = "lag") + starting)]
@@ -244,7 +253,7 @@ loadRast <- function(x, name){
 ##' @param cols character. Which columns should be summarized.
 ##' @param by.cols character. Which columns should be used for grouping data.
 ##'
-##' @details This function is intended to be used within the summarizeHMD function. It likely works standalone but is untested.
+##' @details This function is intended to be used within the \code{\link{summarizeHMD}} function. It likely works standalone but is untested.
 ##'
 ##' @returns A data.table containing the by.cols and summarized cols
 ##'
@@ -297,6 +306,7 @@ numSummary <- function(f, ds, cols, by.cols = sort.cols){
 
 #-------------------------------------------------------------------------------
 
+# Summarize factor data (Added 2026-09-18) ####
 ##' @description Summarize factor data by specified columns
 ##'
 ##' @title Summarize factor data
@@ -305,7 +315,7 @@ numSummary <- function(f, ds, cols, by.cols = sort.cols){
 ##' @param ds data.table. The data.table that should be summarized.
 ##' @param by.cols character. Which columns should be used for grouping data.
 ##'
-##' @details This function is intended to be used within the summarizeHMD function. It likely works standalone but is untested.
+##' @details This function is intended to be used within the \code{\link{summarizeHMD}} function. It likely works standalone but is untested.
 ##'
 ##' @returns A data.table containing the by.cols and columns named after the factor of choice
 ##'

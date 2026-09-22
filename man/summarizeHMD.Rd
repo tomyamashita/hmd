@@ -46,6 +46,17 @@ Summarize tracks by different groups
 This function is intended to summarize classified HMD as created by the \code{\link{classifyHMD}} function.
 It summarizes data by user-selected columns as defined by the sort.cols argument. This should typically at minimum be grid (unique user ID) and day.
 }
+\section{{Unique metrics}}{
+
+Metrics whose calculations are derived from the \code{\link[amt]{amt}} package:
+
+(total distance) = (euclidean distance between first and last points)
+
+(cumulative distance) = sum(step lengths)
+
+tortuosity = (total distance) / (cumulative distance)
+}
+
 \section{{Warning}}{
 
 Working with HMD can be very memory intensive.
@@ -61,7 +72,18 @@ Additionally, the functions in this package likely will not work properly if thi
 
 \examples{
 \dontrun{
-## No example right now
+# To estimate the sampling rate for each track:
+dt[,("min" = min(difft_sec),
+     "1st Qu." = quantile(difft_sec, probs = 0.25),
+     "med" = median(difft_sec),
+     "3rd Qu." = quantile(difft_sec, probs = 0.75),
+     "max" = max(difft_sec),
+     "mean" = mean(difft_sec),
+     "sd" = sd(difft_sec),
+     "NAs" = sum(is.na(difft_sec))),
+    by = .(grid, day)]
+
+## No real example right now
 }
 }
 \references{

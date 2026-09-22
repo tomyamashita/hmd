@@ -1355,6 +1355,15 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
 ##' @references \code{\link{flagAssignment}}, \code{\link{flagRemoval}}, \code{\link{classifyHMD}} for functions in the HMD processing pipeline.
 ##' This function uses the \code{\link{numSummary}}, \code{\link{factSummary}} functions.
 ##'
+##' @section {Unique metrics}:
+##' Metrics whose calculations are derived from the \code{\link[amt]{amt}} package:
+##'
+##' (total distance) = (euclidean distance between first and last points)
+##'
+##' (cumulative distance) = sum(step lengths)
+##'
+##' tortuosity = (total distance) / (cumulative distance)
+##'
 ##' @inheritSection flagAssignment {Warning}
 ##' @inheritSection flagAssignment {Disclaimer}
 ##'
@@ -1373,7 +1382,18 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
 ##' @export
 ##'
 ##' @examples \dontrun{
-##' ## No example right now
+##' # To estimate the sampling rate for each track:
+##' dt[,("min" = min(difft_sec),
+##'      "1st Qu." = quantile(difft_sec, probs = 0.25),
+##'      "med" = median(difft_sec),
+##'      "3rd Qu." = quantile(difft_sec, probs = 0.75),
+##'      "max" = max(difft_sec),
+##'      "mean" = mean(difft_sec),
+##'      "sd" = sd(difft_sec),
+##'      "NAs" = sum(is.na(difft_sec))),
+##'     by = .(grid, day)]
+##'
+##' ## No real example right now
 ##' }
 summarizeHMD <- function(in.dir, out.dir, in.name, out.name, sort.cols, excl.type = c("bldg", "main", "rail"), add.calcs = TRUE, pp = FALSE, cores.left = NULL){
   #in.dir <- file.path("data_grizzly_update", "segment_mo")  # Directory containing the classified HMD
@@ -1392,6 +1412,11 @@ summarizeHMD <- function(in.dir, out.dir, in.name, out.name, sort.cols, excl.typ
     stop("There are no files in the in.dir. Is the in.name correct?")
   }
 
+  # Prepare OIDs for all data
+  message("Calculating number of unique summaries...")
+  f.rows <- calculateIndices(in.files = hmd.class.files, by = sort.cols)
+  message("Calculation complete. Summarizing HMD...")
+
   # Set up parallel processing
   if(pp == TRUE){
     message("Parallel Processing Enabled")
@@ -1407,7 +1432,7 @@ summarizeHMD <- function(in.dir, out.dir, in.name, out.name, sort.cols, excl.typ
     }
     cl1 <- parallel::makeCluster(parallel::detectCores() - cores.left, outfile = "out.txt")
     parallel::clusterExport(cl1, varlist = c("hmd.class.files", "in.dir", "out.dir", "in.name", "out.name",
-                                             "sort.cols", "excl.type", "add.calcs"),
+                                             "sort.cols", "excl.type", "add.calcs", "f.rows"),
                             envir = environment())
   }else{
     cl1 <- NULL
@@ -1440,7 +1465,13 @@ summarizeHMD <- function(in.dir, out.dir, in.name, out.name, sort.cols, excl.typ
         i3 <- i2
       }
       data.table::setkeyv(i3, cols = sort.cols)
-      #i3[1:5,]
+
+      # Assign summarized unique OID to tracks
+      oid1 <- i3[, .N, by = sort.cols]
+      oid1[,`:=` (N = NULL,
+                  OID.track = seq(f.rows[index == i,(OID.start)], f.rows[index == i,(OID.end)]))]
+      i3 <- merge(i3, oid1)
+      i3
 
       ## We only care about points on local roads, trails, and dispersed
       #unique(i3$hmd.type)
@@ -1457,7 +1488,7 @@ summarizeHMD <- function(in.dir, out.dir, in.name, out.name, sort.cols, excl.typ
         dup <- duplicated(i4, by = c(sort.cols, "ts_UTC"))
         message("Removing ", round(sum(dup)/nrow(i4)*100, digits = 2), "% of locations due to duplicate timestamps.")
         i5 <- i4[!dup,]
-        i5[1:5,]
+        #i5[1:5,]
 
         # Summarize distance to variables and calculate track-level metrics
         ## Columns for factor summaries
@@ -1470,8 +1501,8 @@ summarizeHMD <- function(in.dir, out.dir, in.name, out.name, sort.cols, excl.typ
         cols.num <- c("dist_bldg", "dist_main", "dist_railr", "dist_ntd_local", "dist_usfs_local", "dist_ntd_trail", "dist_usfs_trail",
                       "difft_sec", "stepl_m", "speed_kmh")
 
-
         ## Create summaries
+        dist_id <- list(i5[,.(OID.track = mean(OID.track)), by = sort.cols])
         dist_num <- c(lapply(c("N"), numSummary, ds = i5, cols = NA),
                       lapply(c("mn", "sd", "min", "q25", "med", "q75", "q95", "q99", "max"), numSummary, ds = i5, cols = cols.num),
                       lapply(c("first", "last"), numSummary, ds = i5, cols = c("X", "Y")),
@@ -1479,18 +1510,12 @@ summarizeHMD <- function(in.dir, out.dir, in.name, out.name, sort.cols, excl.typ
         dist_fac <- lapply(cols.fac, factSummary, ds = i5)
 
         ## Merge summary outputs
-        dist_sum <- data.table::mergelist(l = c(dist_num, dist_fac))
+        dist_sum <- data.table::mergelist(l = c(dist_id, dist_num, dist_fac))
 
         ## Calculate total distance and tortuosity
         dist_sum$tot_dist <- with(dist_sum, units::set_units(sqrt((X_last - X_first)^2 + (Y_last - Y_first)^2), "meter"))
         dist_sum$tortuosity <- as.numeric(with(dist_sum, tot_dist/cum_dist))
-        dist_sum[1:2,]
-
-        # Track-level metrics calculations (from "amt" package)
-        # tortuosity = (total distance) / (cumulative distance)
-        # (total distance) = (euclidean distance between first and last points)
-        # (cumulative distance) = sum(step lengths) [this was the dist_traveled column from previous method]
-        # (summarize sampling rate) = data.frame(summary(difft_sec), sd = sd(difft_sec), n = length(difft_sec), unit = "sec")
+        #dist_sum[1:2,]
 
         # Additional metrics
         if(add.calcs == TRUE){
@@ -1504,10 +1529,10 @@ summarizeHMD <- function(in.dir, out.dir, in.name, out.name, sort.cols, excl.typ
           cols.add.cnt <- c("in.water", "in.urban")
           cols.add.fac <- c("land.type", "pad.type", "snow.cover")
           cols.add.num <- c("dist_cell", "elev_m", "tri", "slope", "aspect")
-          add_num <- c(lapply(c("N"), numericFun, ds = i5, cols = NA),
-                       lapply(c("cnt"), numericFun, ds = i5, cols = cols.add.cnt),
-                       lapply(c("mn", "med", "sd"), numericFun, ds = i5, cols = cols.add.num))
-          add_fac <- lapply(cols.add.fac, factorFun, ds = i5)
+          add_num <- c(lapply(c("N"), numSummary, ds = i5, cols = NA),
+                       lapply(c("cnt"), numSummary, ds = i5, cols = cols.add.cnt),
+                       lapply(c("mn", "med", "sd"), numSummary, ds = i5, cols = cols.add.num))
+          add_fac <- lapply(cols.add.fac, factSummary, ds = i5)
 
           add_sum <- data.table::mergelist(l = c(add_num, add_fac))
           add_sum$water_prop <- add_sum$in.water/add_sum$n_other
@@ -1520,14 +1545,8 @@ summarizeHMD <- function(in.dir, out.dir, in.name, out.name, sort.cols, excl.typ
           track_all <- dist_sum
         }
 
-        # Merge data and save
-        track_all[1:2,]
-
-        # Create unique identifier for this summary
-        ## THIS NEEDS TO BE DONE LIKE WITH flagAssignment ##
-        #track_all[,paste("OID", paste(sort.cols, collapse = ""), sep = ".") := 1:length(track_all)]
-
         # Save the output
+        #track_all[1:2,]
         saveRDS(track_all, file = out.path)
 
         return(out.path)
@@ -1565,14 +1584,14 @@ summarizeHMD <- function(in.dir, out.dir, in.name, out.name, sort.cols, excl.typ
 ##' @param dtcol character. Column name of the column storing date-time information
 ##' @param idcol character. Column name of the column storing a unique user id
 ##'
-##' @details This function is modified from \code{\link{amt::make_track}} which utilizes \code{\link{amt::step_lengths}}, \code{\link{amt::direction_rel}}, and \code{\link{amt::speed}}.
+##' @details This function is modified from \code{\link[amt]{make_track}} which utilizes \code{\link[amt]{step_lengths}}, \code{\link[amt]{direction_rel}}, and \code{\link[amt]{speed}}.
 ##' If this function is run multiple times on a dataset, such as after running \code{\link{thinHMD}}, it will replace movement metrics each time.
 ##' All calculations are made forward (e.g., between fix 1 and fix 2)
 ##'
 ##' @return The original ds with movement metrics added. Adds difft_sec, stepl_m, speed_mps, speed_kmh, direction, and ta.
 ##' Direction of travel assigns Eastward movements to 0.
 ##'
-##' @references \code{\link{amt::amt}} \code{\link{amt::make_track}}
+##' @references \code{\link[amt]{amt}} \code{\link[amt]{make_track}}
 ##'
 ##' @inheritSection flagAssignment {Disclaimer}
 ##'
@@ -1826,7 +1845,7 @@ splitByMonth <- function(in.dir, out.dir, time.col = "timestamp_POSIXct.UTC", na
 ##' When thin == FALSE: X with a new column added called burst. Bursts < 0 are locations that are sampled more frequently than is allowed by rate and tolerance
 ##' When thin == TRUE: X with extra locations removed.
 ##'
-##' @references \code{\link{amt::amt}}
+##' @references \code{\link[amt]{amt}}
 ##'
 ##' @inheritSection flagAssignment {Disclaimer}
 ##'

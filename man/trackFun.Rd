@@ -25,7 +25,7 @@ Direction of travel assigns Eastward movements to 0.
 Calculate movement metrics (speed, step length, and time between points) for each track
 }
 \details{
-This function is modified from \code{\link{amt::make_track}} which utilizes \code{\link{amt::step_lengths}}, \code{\link{amt::direction_rel}}, and \code{\link{amt::speed}}.
+This function is modified from \code{\link[amt]{make_track}} which utilizes \code{\link[amt]{step_lengths}}, \code{\link[amt]{direction_rel}}, and \code{\link[amt]{speed}}.
 If this function is run multiple times on a dataset, such as after running \code{\link{thinHMD}}, it will replace movement metrics each time.
 All calculations are made forward (e.g., between fix 1 and fix 2)
 }
@@ -41,7 +41,7 @@ Additionally, the functions in this package likely will not work properly if thi
 }
 }
 \references{
-\code{\link{amt::amt}} \code{\link{amt::make_track}}
+\code{\link[amt]{amt}} \code{\link[amt]{make_track}}
 }
 \seealso{
 \code{\link{classifyHMD}}

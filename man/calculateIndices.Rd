@@ -4,7 +4,7 @@
 \alias{calculateIndices}
 \title{Create index across multiple files}
 \usage{
-calculateIndices(in.files, starting = 1)
+calculateIndices(in.files, by = NULL, starting = 1)
 }
 \arguments{
 \item{in.files.}{character vector of file paths to saved RDS files containing data.tables or data.frames.}
@@ -18,7 +18,7 @@ data.table with index number of the in.files, the number of rows in each file, t
 Calculate number of rows in each month to create a continuous OID across months
 }
 \details{
-This function is standalone but intended to be used within the \code{\link{flagRemoval}} as a way to create a unique OID that starts at the beginning of the function.
+This function is standalone but intended to be used within the \code{\link{flagAssignment}} as a way to create a unique OID that starts at the beginning of the function.
 }
 \section{{Disclaimer}}{
 
@@ -32,7 +32,7 @@ Additionally, the functions in this package likely will not work properly if thi
 }
 }
 \references{
-\code{\link{flagAssignment}}
+\code{\link{flagAssignment}} \code{\link{summarizeHMD}}
 }
 \concept{hmd}
 \concept{indicing}

@@ -51,3 +51,11 @@
 * Added the summarizeHMD function and associated documentation
 * summarizeHMD requires some additional modification including adding OIDs to summarized data.
 * Added summarizeHMD's internal functions as standalone functions. They are untested but should work within the standard pipeline. 
+
+### Version 0.0.0.10 (2026-09-22)
+* Updated summarizeHMD function documentation to describe some of the metrics outputted. 
+* Updated documentation to properly link to external functions. 
+* Updated internal function calculateIndices to allow index calculation for summaries to be used within summarizeHMD. 
+* Tested and fixed bugs in summarizeHMD internal functions. 
+
+

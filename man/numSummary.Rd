@@ -23,7 +23,7 @@ A data.table containing the by.cols and summarized cols
 Summarize numeric data by specified columns
 }
 \details{
-This function is intended to be used within the summarizeHMD function. It likely works standalone but is untested.
+This function is intended to be used within the \code{\link{summarizeHMD}} function. It likely works standalone but is untested.
 }
 \section{{Disclaimer}}{
 
