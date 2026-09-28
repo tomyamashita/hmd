@@ -1013,7 +1013,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
       return(ext)
     }else{
       # Load in the cleaned HMD data
-      message("Loading HMD and calculating time of day metrics...")
+      message("Loading File ", h, " and calculating time of day metrics...")
       h2 <- readRDS(h1)[,.(OID.POINT = OID.POINT,
                            grid = grid,
                            day = day,
@@ -1024,7 +1024,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
 
       # Check for and remove duplicate time stamps for an individual
       dup <- duplicated(h2, by = c("grid", "day", "ts_UTC"))
-      message("Removing ", round(sum(dup)/nrow(h2)*100, digits = 2), "% of locations due to duplicate timestamps.")
+      message("Removing ", round(sum(dup)/nrow(h2)*100, digits = 2), "% of locations from File ", h, " due to duplicate timestamps.")
       h3 <- h2[!dup,]
 
       # Non-spatial pieces
@@ -1059,12 +1059,12 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
                 azimuth = sun2b$azimuth)]
       #h4
 
-      message("Time of day calculated. Converting to spatial data.frame...")
+      message("Time of day calculated for File ", h, ". Converting to spatial data.frame...")
 
       # Convert to spatial file
       if(nrow(h4) > 500000){
         chunks <- data.frame(start = seq(1,nrow(h4), by = 500000), end = c(seq(1,nrow(h4), by = 500000)[-1]-1, nrow(h4)))
-        message("HMD contains more than 500,000 rows. Chunking spatial processes into ", nrow(chunks), " chunks...")
+        message("File ", h, " contains more than 500,000 rows. Chunking spatial processes into ", nrow(chunks), " chunks...")
       }else{
         chunks <- data.frame(start = 1, end = nrow(h4))
       }
@@ -1088,7 +1088,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
         # Filter chunk to study area
         h6 <- sf::st_filter(h5_prj, bbox_buffer)
         if(nrow(h6) == 0){
-          stop("There is no HMD data available in your study area. Try again")
+          stop("There is no HMD data available in your study area. Try again...")
         }
 
         # Create the output object
@@ -1156,13 +1156,12 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
         #h7[1:5,]
 
         # Additional spatial calculations
-        message("HMD type calculated. Calculating additional metrics...")
+        message("HMD type calculated for File ", h, ", Chunk ", i, " of ", nrow(chunks), ". Calculating additional metrics...")
         if(add.calcs == TRUE){
           # Is the point in a water body
           ## Calculate whether HMD point intersects waterbody
           int.water <- sf::st_intersects(x = h6, y = water_prj)
 
-          message("Water done...")
           # In an urban area
           ## Calculate whether HMD point intersects an urban area
           int.urban <- sf::st_intersects(x = h6, y = urban_prj)
@@ -1234,7 +1233,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
           #h7.sc
 
           # Add data to full dataset
-          message("Additional Calculations complete. Merging data and saving output...")
+          message("Additional Calculations complete for File ", h, ", Chunk ", i, " of ", nrow(chunks), ". Merging data and saving output...")
           h8 <- data.table::mergelist(l = list(h7,
                                                dist_bldg, dist_main, dist_rail,
                                                dist_ntd_local, dist_usfs_local,
@@ -1250,22 +1249,11 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
         }
         #h8
 
-        ## Move completed files to a subfolder
-        if(move.files == TRUE){
-          if(!fs::dir_exists(file.path(dirname(h1), "classified"))){
-            message("Creating the classified folder inside ", in.dir)
-            fs::dir_create(file.path(dirname(h1), "classified"))
-          }
-          fs::file_move(h1, file.path(dirname(h1), "classified", basename(x)))
-        }else{
-          message("Files not moved.")
-        }
-
         # Return different outputs based on number of chunks
         if(nrow(chunks) == 1){
           return(h8)
         }else{
-          file.out <- file.path("tempDir_Spatial", paste("File_", h, "_Chunk_", i, ".RDS", sep = ""))
+          file.out <- file.path("tempDir_Spatial", paste("File_", h, "_Chunk_", i, "_of_", nrow(chunks), ".RDS", sep = ""))
           saveRDS(h8, file = file.out)
           return(file.out)
         }
@@ -1283,14 +1271,27 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
       }
 
       # Create track metrics (speed, turn angle, etc.)
-      message("All spatial metrics calculated. Calculating track-level metrics...")
+      message("All spatial metrics calculated for File", h, ". Calculating track-level metrics...")
       h9 <- trackFun(ds = h8, xcol = "X", ycol = "Y", dtcol = "ts_UTC", idcol = "grid")
 
       # Save the distance calculations
-      message("Track metrics calculated at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ". Cleaning up and saving output...")
+      message("Track metrics calculated for File ", h, " at ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), ". Cleaning up and saving output...")
       ## View output
       #class(h9)
       #h9[1:5,]
+
+      ## Move completed files to a subfolder
+      if(move.files == TRUE){
+        # Create the directory if it does not exist
+        if(!fs::dir_exists(file.path(dirname(h1), "classified"))){
+          message("Creating the 'classified' folder inside ", in.dir)
+          fs::dir_create(file.path(dirname(h1), "classified"))
+        }
+        # Move the files
+        fs::file_move(h1, file.path(dirname(h1), "classified", basename(h1)))
+      }else{
+        message("Files not moved.")
+      }
 
       ## Save output
       saveRDS(h9, out.path)
@@ -1311,8 +1312,6 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
   if(fs::dir_exists("tempDir_Spatial")){
     fs::dir_delete("tempDir_Spatial")
   }
-
-
 
   # Convert the outputs to a string
   hmd2 <- do.call(c, hmd1)
