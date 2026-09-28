@@ -17,6 +17,7 @@ classifyHMD(
   prep.data = FALSE,
   save.gpkg = FALSE,
   gpkg.folder = NULL,
+  move.files = FALSE,
   pp = FALSE,
   cores.left = NULL
 )
@@ -53,12 +54,12 @@ If both are provided, then the function will use the nearest of the two to deter
 Inside this folder, 3 files will be created: studyarea_tiled_data.gpkg will contain all vector data, studyarea_tiled_DEM.tiff will contain elevation-related data, and studyarea_tiled_snow.tiff will contain daily snow cover data.
 This function will create a folder if the named folder does not exist}
 
+\item{move.files}{logical. Should completed files be moved to a sub-directory in the the in.dir. This called "classified" by default.}
+
 \item{pp}{logical. Should the function run using parallel processing?}
 
 \item{cores.left}{numeric. How many cores should be reserved? Ignored when pp = FALSE.
 Most functions should not be run on more than 8 cores. A warning is given when you use more than 8 cores.}
-
-\item{move.files}{logical. Should completed files be moved to a sub-directory in the the in.dir. This called "classified" by default.}
 }
 \value{
 A list of file paths leading to the newly created classified data.

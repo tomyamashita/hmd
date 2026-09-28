@@ -670,7 +670,7 @@ flagRemoval <- function(in.dir, out.dir, FF.remove = NULL, FF.suspect = NULL, me
 ##' @examples \dontrun{
 ##' ## No example right now
 ##' }
-classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, road.source, snowfraction = 50, add.calcs = TRUE, prep.data = FALSE, save.gpkg = FALSE, gpkg.folder = NULL, pp = FALSE, cores.left = NULL){
+classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, road.source, snowfraction = 50, add.calcs = TRUE, prep.data = FALSE, save.gpkg = FALSE, gpkg.folder = NULL, move.files = FALSE, pp = FALSE, cores.left = NULL){
   #in.dir <- file.path(getwd(), "test_data", "cleaned")               # Directory containing cleaned HMD data
   #out.dir <- file.path(getwd(), "test_data", "classify")            # Directory containing classified HMD data and where files will be saved
   #studyarea <- file.path("E:","HMD", "Wolverines", "RecClass_test", "data_spatial", "Flathead_NF.shp")     # Define a study area for filtering points and road features. This can be a file path, sf object, or SpatVector object. Will be converted to a sf object
@@ -1020,7 +1020,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
                            longitude = longitude,
                            latitude = latitude,
                            ts_UTC = timestamp_POSIXct.UTC)]
-      #h2[1:5,]
+      #h2
 
       # Check for and remove duplicate time stamps for an individual
       dup <- duplicated(h2, by = c("grid", "day", "ts_UTC"))
@@ -1057,7 +1057,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
                 tod = sun1a$tod,
                 altitude = sun2b$altitude,
                 azimuth = sun2b$azimuth)]
-      h4[1:5,]
+      #h4
 
       message("Time of day calculated. Converting to spatial data.frame...")
 
@@ -1189,9 +1189,9 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
 
           # Elevation metrics
           ## Extract raster values for each HMD point
-          elev1 <- data.table::as.data.table(terra::extract(elev_prj, h6))
-          colnames(elev1)[1] <- "OID"
-          elev1[1:5,]
+          ## Need to ensure that proper OID is re-assigned to the output for future merging
+          elev1 <- data.table::as.data.table(cbind(sf::st_drop_geometry(h6)[,c("OID")], terra::extract(elev_prj, h6)[,-1]))
+          #elev1
 
           # Add new columns
           h7.adds <- data.table::data.table(OID = h7$OID,
@@ -1204,8 +1204,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
                                             pad.type = as.factor(sapply(int.pad, function(x){
                                               if(length(x) == 0){"none"}else{paste(pad_prj$type[x], collapse = ", ")}
                                             })))
-          h7.adds
-          #h7 <- cbind(h7, dist.cell)
+          #h7.adds
 
           # Snow cover metrics
           ## Split HMD by day
@@ -1232,7 +1231,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
           })
           ## Re-combine HMD data
           h7.sc <- data.table::rbindlist(h6.sc)
-          h7.adds[1:5,]
+          #h7.sc
 
           # Add data to full dataset
           message("Additional Calculations complete. Merging data and saving output...")
