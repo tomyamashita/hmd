@@ -63,3 +63,7 @@
 * Updated classifyHMD to properly assign elevation values to points based on a common OID. Previously, OID was erroneously assigned to the index number from the raster extraction.
 * Additional minor bug fixes to classifyHMD to reduce number of lines of code to run. 
 * Clean up of output language for easier following progress when running in Parallel. 
+
+### Version 0.0.0.12 (2026-11-03)
+* Updated thinHMD to assign all points to a burst when thinning is not requested
+

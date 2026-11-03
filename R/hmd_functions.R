@@ -1848,6 +1848,8 @@ splitByMonth <- function(in.dir, out.dir, time.col = "timestamp_POSIXct.UTC", na
 ##' @inheritSection flagAssignment {Disclaimer}
 ##'
 ##' @importFrom lubridate seconds period_to_seconds
+##' @importFrom data.table data.table fifelse
+##' @importFrom zoo na.locf
 ##'
 ##' @keywords manip
 ##'
@@ -1919,6 +1921,8 @@ thinHMD <- function(x, idcol, dtcol, rate = lubridate::seconds(30), tolerance = 
     x2 <- x1[,burst := NULL]
     return(x2)
   }else{
+    x[,`:=` (burst = data.table::fifelse(burst < 0, NA, burst))]
+    x[,`:=` (burst = zoo::na.locf(burst))]
     return(x)
   }
   rm(resFun, x1, x2)
