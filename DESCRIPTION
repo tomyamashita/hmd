@@ -39,4 +39,4 @@ Imports:
     zoo (>= 1.8-15)
 Suggests: 
     ggplot2
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.1

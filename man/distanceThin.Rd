@@ -67,7 +67,7 @@ Additionally, the functions in this package likely will not work properly if thi
 }
 }
 \references{
-\code{\link[amt]{amt}}
+\code{\link{thinHMD}}
 }
 \concept{hmd}
 \concept{rarifaction}

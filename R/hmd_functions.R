@@ -1843,7 +1843,9 @@ splitByMonth <- function(in.dir, out.dir, time.col = "timestamp_POSIXct.UTC", na
 ##' When thin == FALSE: X with a new column added called burst. Bursts < 0 are locations that are sampled more frequently than is allowed by rate and tolerance
 ##' When thin == TRUE: X with extra locations removed.
 ##'
-##' @references \code{\link[amt]{amt}}
+##' @references For original code inspiration: \code{\link[amt]{amt}}
+##'
+##' Similar functions: \code{\link{distanceThin}}
 ##'
 ##' @inheritSection flagAssignment {Disclaimer}
 ##'
@@ -1962,7 +1964,7 @@ thinHMD <- function(x, idcol, dtcol, rate = lubridate::seconds(30), tolerance = 
 ##' When thin == FALSE: X with a new column added called burst. Bursts < 0 are locations that are sampled more frequently than is allowed by rate and tolerance
 ##' When thin == TRUE: X with extra locations removed.
 ##'
-##' @references \code{\link[amt]{amt}}
+##' @references \code{\link{thinHMD}}
 ##'
 ##' @inheritSection flagAssignment {Disclaimer}
 ##'

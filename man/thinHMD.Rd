@@ -52,7 +52,9 @@ Additionally, the functions in this package likely will not work properly if thi
 }
 }
 \references{
-\code{\link[amt]{amt}}
+For original code inspiration: \code{\link[amt]{amt}}
+
+Similar functions: \code{\link{distanceThin}}
 }
 \concept{hmd}
 \concept{rarifaction}

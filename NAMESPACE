@@ -20,74 +20,94 @@ export(splitByMonth)
 export(summarizeHMD)
 export(thinHMD)
 export(trackFun)
-importFrom(bit64,as.bitstring)
-importFrom(bit64,as.double.integer64)
-importFrom(bit64,is.integer64)
+importFrom(bit64,
+  as.bitstring,
+  as.double.integer64,
+  is.integer64
+)
 importFrom(collapse,roworder)
-importFrom(data.table,as.data.table)
-importFrom(data.table,cbindlist)
-importFrom(data.table,data.table)
-importFrom(data.table,dcast)
-importFrom(data.table,fifelse)
-importFrom(data.table,mergelist)
-importFrom(data.table,rbindlist)
-importFrom(data.table,setkeyv)
-importFrom(data.table,setnames)
-importFrom(data.table,shift)
-importFrom(fs,dir_create)
-importFrom(fs,dir_delete)
-importFrom(fs,dir_exists)
-importFrom(fs,dir_ls)
-importFrom(fs,file_move)
-importFrom(fs,path_ext_remove)
+importFrom(data.table,
+  as.data.table,
+  cbindlist,
+  data.table,
+  dcast,
+  fifelse,
+  mergelist,
+  rbindlist,
+  setkeyv,
+  setnames,
+  shift
+)
+importFrom(fs,
+  dir_create,
+  dir_delete,
+  dir_exists,
+  dir_ls,
+  file_move,
+  path_ext_remove
+)
 importFrom(geojsonsf,geojson_sf)
-importFrom(igraph,add_edges)
-importFrom(igraph,components)
-importFrom(igraph,make_empty_graph)
-importFrom(lubridate,as_date)
-importFrom(lubridate,ceiling_date)
-importFrom(lubridate,floor_date)
-importFrom(lubridate,period_to_seconds)
-importFrom(lubridate,seconds)
-importFrom(lubridate,with_tz)
+importFrom(igraph,
+  add_edges,
+  components,
+  make_empty_graph
+)
+importFrom(lubridate,
+  as_date,
+  ceiling_date,
+  floor_date,
+  period_to_seconds,
+  seconds,
+  with_tz
+)
 importFrom(matrixStats,rowMins)
-importFrom(parallel,clusterExport)
-importFrom(parallel,detectCores)
-importFrom(parallel,makeCluster)
-importFrom(parallel,stopCluster)
+importFrom(parallel,
+  clusterExport,
+  detectCores,
+  makeCluster,
+  stopCluster
+)
 importFrom(pbapply,pblapply)
 importFrom(quadkeyr,quadkey_df_to_polygon)
 importFrom(readr,read_lines)
-importFrom(sf,st_as_sf)
-importFrom(sf,st_as_sfc)
-importFrom(sf,st_bbox)
-importFrom(sf,st_buffer)
-importFrom(sf,st_coordinates)
-importFrom(sf,st_crs)
-importFrom(sf,st_distance)
-importFrom(sf,st_drop_geometry)
-importFrom(sf,st_filter)
-importFrom(sf,st_geometry)
-importFrom(sf,st_intersects)
-importFrom(sf,st_layers)
-importFrom(sf,st_nearest_feature)
-importFrom(sf,st_read)
-importFrom(sf,st_transform)
-importFrom(sf,st_write)
-importFrom(sf,st_zm)
-importFrom(suncalc,getSunlightPosition)
-importFrom(suncalc,getSunlightTimes)
-importFrom(terra,crop)
-importFrom(terra,extract)
-importFrom(terra,is.valid)
-importFrom(terra,makeValid)
-importFrom(terra,mosaic)
-importFrom(terra,project)
-importFrom(terra,sprc)
-importFrom(terra,terrain)
-importFrom(terra,vect)
+importFrom(sf,
+  st_as_sf,
+  st_as_sfc,
+  st_bbox,
+  st_buffer,
+  st_coordinates,
+  st_crs,
+  st_distance,
+  st_drop_geometry,
+  st_filter,
+  st_geometry,
+  st_intersects,
+  st_layers,
+  st_nearest_feature,
+  st_read,
+  st_transform,
+  st_write,
+  st_zm
+)
+importFrom(suncalc,
+  getSunlightPosition,
+  getSunlightTimes
+)
+importFrom(terra,
+  crop,
+  extract,
+  is.valid,
+  makeValid,
+  mosaic,
+  project,
+  sprc,
+  terrain,
+  vect
+)
 importFrom(tidyr,separate)
-importFrom(units,as_units)
-importFrom(units,drop_units)
-importFrom(units,set_units)
+importFrom(units,
+  as_units,
+  drop_units,
+  set_units
+)
 importFrom(zoo,na.locf)
