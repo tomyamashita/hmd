@@ -2,7 +2,7 @@
 % Please edit documentation in R/internal_functions.R
 \name{loadVector}
 \alias{loadVector}
-\title{Load in vector data}
+\title{(Internal) Load in vector data}
 \usage{
 loadVector(x, gpkg)
 }

@@ -65,5 +65,10 @@
 * Clean up of output language for easier following progress when running in Parallel. 
 
 ### Version 0.0.0.12 (2026-11-03)
-* Updated thinHMD to assign all points to a burst when thinning is not requested
+* Updated thinHMD to assign all points to a burst when thinning is not requested. 
+
+### Version 0.0.0.13 (2026-11-05)
+* Added the distanceThin function to rarify points based on spatial and temporal information. 
+* Separated internal functions of distanceThin into standalone functions (Note: These may not work standalone as they are designed to work within a data.table). 
+* Added documentation for the new functions and updated dependencies. 
 

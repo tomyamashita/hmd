@@ -2,7 +2,7 @@
 % Please edit documentation in R/internal_functions.R
 \name{distToFeature}
 \alias{distToFeature}
-\title{Distance to the nearest feature}
+\title{(Internal) Distance to the nearest feature}
 \usage{
 distToFeature(x, n, feature)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/internal_functions.R
 \name{calculateIndices}
 \alias{calculateIndices}
-\title{Create index across multiple files}
+\title{(Internal) Create index across multiple files}
 \usage{
 calculateIndices(in.files, by = NULL, starting = 1)
 }

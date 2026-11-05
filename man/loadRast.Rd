@@ -2,7 +2,7 @@
 % Please edit documentation in R/internal_functions.R
 \name{loadRast}
 \alias{loadRast}
-\title{Load tiled raster data}
+\title{(Internal) Load tiled raster data}
 \usage{
 loadRast(x, name)
 }

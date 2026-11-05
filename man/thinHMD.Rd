@@ -2,7 +2,7 @@
 % Please edit documentation in R/hmd_functions.R
 \name{thinHMD}
 \alias{thinHMD}
-\title{Resample HMD to a set sampling rate}
+\title{Rarify HMD to a set sampling rate}
 \usage{
 thinHMD(
   x,
@@ -34,7 +34,7 @@ When thin == FALSE: X with a new column added called burst. Bursts < 0 are locat
 When thin == TRUE: X with extra locations removed.
 }
 \description{
-Resample HMD locations to remove locations that are too close in time
+Rarify HMD locations to remove locations that are too close in time only
 }
 \details{
 This function is derived from and modified from the function amt::track_resample.
@@ -55,5 +55,6 @@ Additionally, the functions in this package likely will not work properly if thi
 \code{\link[amt]{amt}}
 }
 \concept{hmd}
+\concept{rarifaction}
 \concept{track resampling}
 \keyword{manip}

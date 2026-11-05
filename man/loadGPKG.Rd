@@ -2,7 +2,7 @@
 % Please edit documentation in R/internal_functions.R
 \name{loadGPKG}
 \alias{loadGPKG}
-\title{load tiled geopackages}
+\title{(Internal) load tiled geopackages}
 \usage{
 loadGPKG(l, n)
 }

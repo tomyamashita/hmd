@@ -2,7 +2,7 @@
 % Please edit documentation in R/internal_functions.R
 \name{factSummary}
 \alias{factSummary}
-\title{Summarize factor data}
+\title{(Internal) Summarize factor data}
 \usage{
 factSummary(f, ds, by.cols = sort.cols)
 }
@@ -20,7 +20,8 @@ A data.table containing the by.cols and columns named after the factor of choice
 Summarize factor data by specified columns
 }
 \details{
-This function is intended to be used within the \code{\link{summarizeHMD}} function. It likely works standalone but is untested.
+This function is intended to be used within the \code{\link{summarizeHMD}} function.
+It likely works standalone but is untested.
 }
 \section{{Disclaimer}}{
 

@@ -15,7 +15,7 @@
 # Calculate distance to nearest feature (added 2026-05-28) ####
 ##' @description Simplified calculation of distance to nearest feature while maintaining structure of nearest feature data
 ##'
-##' @title Distance to the nearest feature
+##' @title (Internal) Distance to the nearest feature
 ##'
 ##' @param x sf object. Spatial data.frame of the input data
 ##' @param n String. Name that should be used for output files
@@ -59,7 +59,7 @@ distToFeature <- function(x, n, feature){
 # Calculate number of rows in each month's worth of data to create a universal Object Identifier that is unique for each row ####
 ##' @description Calculate number of rows in each month to create a continuous OID across months
 ##'
-##' @title Create index across multiple files
+##' @title (Internal) Create index across multiple files
 ##'
 ##' @param in.files. character vector of file paths to saved RDS files containing data.tables or data.frames.
 ##' @param starting. Numeric. What should the starting value of the index be? Defaults to 1
@@ -112,7 +112,7 @@ calculateIndices <- function(in.files, by = NULL, starting = 1){
 # Load tiled data from geopackages (added 2026-09-17) ####
 ##' @description Load in data from geopackages and subset to tiles
 ##'
-##' @title load tiled geopackages
+##' @title (Internal) load tiled geopackages
 ##'
 ##' @param l list of geopackage file paths
 ##' @param n name of the geopackage to use. Defines names of columns for this data
@@ -162,7 +162,7 @@ loadGPKG <- function(l, n){
 # Load in vector data (added 2026-09-17) ####
 ##' @description Load in vector data from a geopackage based on a short name of a layer
 ##'
-##' @title Load in vector data
+##' @title (Internal) Load in vector data
 ##'
 ##' @param x character. Name of the layer. Need not be a full name but must be unique.
 ##' @param gpkg character. Name of the geopackage containing the data
@@ -203,7 +203,7 @@ loadVector <- function(x, gpkg){
 # Load in raster data (added 2026-09-17) ####
 ##' @description Load in raster data within a study area
 ##'
-##' @title Load tiled raster data
+##' @title (Internal) Load tiled raster data
 ##'
 ##' @param x Directory containing rasters
 ##' @param name Name to use for the raster layer
@@ -245,7 +245,7 @@ loadRast <- function(x, name){
 # Summarize numeric data (Added 2026-09-18) ####
 ##' @description Summarize numeric data by specified columns
 ##'
-##' @title Summarize numeric data
+##' @title (Internal) Summarize numeric data
 ##'
 ##' @param f character. Which type of numeric summary should be created.
 ##' This should be one of c("N", "mn", "min", "q01", "q05", "q25", "med", "q75", "q95" "q99", "max", "sd", "first" "last", "cum_dist", "cnt").
@@ -309,13 +309,14 @@ numSummary <- function(f, ds, cols, by.cols = sort.cols){
 # Summarize factor data (Added 2026-09-18) ####
 ##' @description Summarize factor data by specified columns
 ##'
-##' @title Summarize factor data
+##' @title (Internal) Summarize factor data
 ##'
 ##' @param f character. Column name of the factor column that should be summarized.
 ##' @param ds data.table. The data.table that should be summarized.
 ##' @param by.cols character. Which columns should be used for grouping data.
 ##'
-##' @details This function is intended to be used within the \code{\link{summarizeHMD}} function. It likely works standalone but is untested.
+##' @details This function is intended to be used within the \code{\link{summarizeHMD}} function.
+##' It likely works standalone but is untested.
 ##'
 ##' @returns A data.table containing the by.cols and columns named after the factor of choice
 ##'
@@ -351,5 +352,141 @@ factSummary <- function(f, ds, by.cols = sort.cols){
   return(t5)
   rm(t1, t2, t3, t4, t5, cols.old, cols.new)
 }
+
+
+#-------------------------------------------------------------------------------
+
+# Identify bursts in space and time (Added 2026-11-05) ####
+##' @description Identify bursts based on spatial and temporal information
+##'
+##' @title (Internal) Identify bursts
+##'
+##' @param geom character. Column name identifying the geometry column
+##' @param time character. Column name identifying the date-time column
+##' @param size.val numeric or units. Distance threshold to identify points as being close to each other.
+##' Inherits from \code{\link{distanceThin}}.
+##' @param rate.val numeric or period. Time threshold to identify points as being close to each other.
+##' Inherits from \code{\link{distanceThin}}.
+##'
+##' @details This function is intended to be used within the \code{\link{distanceThin}} function.
+##' It likely does not work as a standalone function, unless used as a do operation in a data.table.
+##'
+##' @returns an integer vector of burst identities.
+##'
+##' @inheritSection flagAssignment {Disclaimer}
+##'
+##' @importFrom sf st_distance
+##' @importFrom igraph make_empty_graph add_edges components
+##'
+##' @keywords manip
+##'
+##' @concept hmd
+##' @concept track resampling
+##' @concept rarifaction
+##'
+##' @export
+##'
+##' @examples \dontrun{
+##' ## No example right now
+##' }
+burstFun2 <- function(geom, time, size.val = size, rate.val = rate) {
+  # Get length of bursts
+  n <- length(time)
+  if (n == 1L) return(1L)
+
+  # Sort times so we can find each point's temporal window
+  t <- as.numeric(time)
+  ord <- order(t)
+  ts <- t[ord]
+
+  # For each point, find later points within the time threshold
+  end <- findInterval(ts + rate.val, ts)
+  candidates <- lapply(seq_len(n - 1L), function(k) {
+    if(end[k] > k){seq.int(k + 1L, end[k])}else{integer()}
+  })
+
+  counts <- lengths(candidates)
+  if (sum(counts) == 0L) return(seq_len(n))
+
+  i <- rep.int(seq_len(n - 1L), counts)
+  j <- unlist(candidates, use.names = FALSE)
+
+  # Map candidate pairs back to the original row order
+  i <- ord[i]
+  j <- ord[j]
+
+  # Calculate only candidate-pair distances, not a full distance matrix
+  d <- sf::st_distance(geom[i], geom[j], by_element = TRUE)
+  keep <- as.numeric(d) <= size.val
+
+  if (!any(keep)) return(seq_len(n))
+
+  # Determine relationship between pairs
+  graph <- igraph::make_empty_graph(n = n, directed = FALSE)
+  graph <- igraph::add_edges(graph, as.vector(rbind(i[keep], j[keep])))
+
+  # Output group assignment
+  out <- igraph::components(graph)$membership
+
+  # Return value and cleanup
+  return(out)
+  rm(n, t, ord, ts, end, candidates, counts, i, j, d, keep, graph, out)
+  #rm(geom, time, size.val, rate.val)
+}
+
+
+#-------------------------------------------------------------------------------
+
+# Select a single row from a burst (Added 2026-11-05) ####
+##' @description Select a single row from a burst.
+##'
+##' @title (Internal) Select a row from a burst
+##'
+##' @param oid. character. Column name identifying the OID.POINT column
+##' @param mthd. method to use for selection. See \code{\link{distanceThin}} for details on method options.
+##'
+##' @details This function is intended to be used within the \code{\link{distanceThin}} function.
+##' It likely does not work as a standalone function, unless used as a do operation in a data.table.
+##'
+##' @returns a logical vector of selected points.
+##'
+##' @inheritSection flagAssignment {Disclaimer}
+##'
+##' @keywords manip
+##'
+##' @concept hmd
+##' @concept track resampling
+##' @concept rarifaction
+##'
+##' @export
+##'
+##' @examples \dontrun{
+##' ## No example right now
+##' }
+selFun2 <- function(oid, mthd = method){
+  # Get length of the OIDs
+  n <- length(oid)
+  # Select a single OID from the burst based on multiple criteria
+  if(n == 1){
+    return(TRUE)
+  }else{
+    # Create vector of logicals
+    sel <- rep(FALSE, times = n)
+    # Select a single point based on selection method
+    sel <- switch(mthd,
+                  random = sel[sample(seq_len(n), size = 1)] <- TRUE,
+                  first = sel[1] <- TRUE,
+                  last = sel[n] <- TRUE,
+                  median = sel[floor(median(seq_len(n)))] <- TRUE)
+    # Return output
+    return(sel)
+  }
+  # Clean up
+  rm(n, sel)
+  #rm(oid)
+}
+
+
+#-------------------------------------------------------------------------------
 
 

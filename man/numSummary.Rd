@@ -2,7 +2,7 @@
 % Please edit documentation in R/internal_functions.R
 \name{numSummary}
 \alias{numSummary}
-\title{Summarize numeric data}
+\title{(Internal) Summarize numeric data}
 \usage{
 numSummary(f, ds, cols, by.cols = sort.cols)
 }

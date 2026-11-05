@@ -1,7 +1,7 @@
 Package: hmd
 Type: Package
 Title: Process Human Mobility Data for Use in Wildlife Research
-Version: 0.0.0.12
+Version: 0.0.0.13
 Authors@R: c(person(given = "Thomas J.", family = "Yamashita", 
                     role = c("aut", "cre"), 
                     email = "tjyamashta@gmail.com", 
@@ -24,6 +24,7 @@ Imports:
     fs (>= 2.1.0),
     geojsonsf (>= 2.0.5),
     geosphere (>= 1.6-8),
+    igraph (>= 2.3.4),
     lubridate (>= 1.9.5),
     matrixStats (>= 1.5.0),
     parallel (>= 4.5.3),

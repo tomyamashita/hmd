@@ -1822,10 +1822,10 @@ splitByMonth <- function(in.dir, out.dir, time.col = "timestamp_POSIXct.UTC", na
 
 #-------------------------------------------------------------------------------
 
-# Resample locations to thin fixes based on a time interval (added 2026-06-03) ####
-##' @description Resample HMD locations to remove locations that are too close in time
+# Rarify locations to thin fixes based on a time interval (added 2026-06-03) ####
+##' @description Rarify HMD locations to remove locations that are too close in time only
 ##'
-##' @title Resample HMD to a set sampling rate
+##' @title Rarify HMD to a set sampling rate
 ##'
 ##' @param x data.table. Data.table containing the time information.
 ##' @param idcol character. Column name of the unique user id column
@@ -1855,6 +1855,7 @@ splitByMonth <- function(in.dir, out.dir, time.col = "timestamp_POSIXct.UTC", na
 ##'
 ##' @concept hmd
 ##' @concept track resampling
+##' @concept rarifaction
 ##'
 ##' @export
 ##'
@@ -1931,4 +1932,119 @@ thinHMD <- function(x, idcol, dtcol, rate = lubridate::seconds(30), tolerance = 
 
 
 #-------------------------------------------------------------------------------
+
+# Rarify locations to thin fixes that are too close in both space and time (Added 2026-11-05) ####
+##' @description Rarify HMD locations to remove locations that are too close in space and time
+##'
+##' @title Rarify HMD based on space and time
+##'
+##' @param x data.table. Data.table containing the space and time information.
+##' @param idcol character. Column name of the unique user id column
+##' @param dtcol character. Column name of the date-time column
+##' @param xcol character. Column name of the column containing the x coordinate
+##' @param ycol character. Column name of the column containing the y coordinate
+##' @param size units or numeric. What is the expected distance between points to consider points to be the same
+##' @param rate period or numeric. What is the expected sampling rate to include.
+##' This can be either a period object from the lubridate package or a numeric in seconds.
+##' @param method character. What method should be used to select a point from a burst? Options include:
+##' 'random': function will randomly select a point within a burst (default).
+##' 'first': function will select the first point from a burst.
+##' 'last': function will select the last point from a burst.
+##' 'median': function will select the median point in a burst.
+##' @param thin logical. Should rows be removed if they are too close together?
+##'
+##' @details This function is designed to create bursts based on both spatial and temporal proximity.
+##' It will group points with the same user ID that are close in both space and time, as specified by the size and rate parameters.
+##'
+##' @note This function was optimized using AI assistance
+##'
+##' @returns One of:
+##' When thin == FALSE: X with a new column added called burst. Bursts < 0 are locations that are sampled more frequently than is allowed by rate and tolerance
+##' When thin == TRUE: X with extra locations removed.
+##'
+##' @references \code{\link[amt]{amt}}
+##'
+##' @inheritSection flagAssignment {Disclaimer}
+##'
+##' @importFrom lubridate period_to_seconds
+##' @importFrom data.table as.data.table
+##' @importFrom sf st_as_sf
+##'
+##' @keywords manip
+##'
+##' @concept hmd
+##' @concept track resampling
+##' @concept rarifaction
+##'
+##' @export
+##'
+##' @examples \dontrun{
+##' ## No example right now
+##' }
+distanceThin <- function(dt, idcol = "grid", dtcol = "ts_UTC", xcol = "X", ycol = "Y", size, rate, method = "random", thin = TRUE){
+  #hmd1 <- fs::dir_ls(file.path("data_HMD_v3", "classify"), type = 'file')
+  #dt <- data.table::as.data.table(readRDS(hmd1[36]))
+  #idcol <- "grid"
+  #dtcol <- "ts_UTC"
+  #xcol <- "X"
+  #ycol <- "Y"
+  #crs <- unique(dt$crs)
+  #size <- 5
+  #rate <- lubridate::minutes(5)
+  #method <- "random"    #methods = c("random", "first", "median", "last")
+  #thin <- FALSE
+
+  # Check if the method is valid
+  stopifnot(method %in% c("random", "first", "median", "last"))
+
+  # Check that size is a units object
+  if(class(size) == "units"){
+    message("size is a units object. Dropping units...")
+    size <- as.numeric(size)
+  }
+
+  # Check if rate and tolerance are period objects and convert to seconds
+  if(class(rate) != "Period"){
+    message("rate is not a period object. Assuming this is a numeric in seconds.")
+  }else{
+    rate <- lubridate::period_to_seconds(rate)
+  }
+
+  # Select only necessary columns
+  dt1 <- dt[,.SD, .SDcols = c("OID.POINT", idcol, dtcol, xcol, ycol)]
+
+  # And rename columns to standardized value
+  colnames(dt1) <- c("OID.POINT", "idcol", "dtcol", "xcol", "ycol")
+
+  # Spatialize the data and ensure it stays a data.table
+  message("Spatializing data...")
+  dt2 <- data.table::as.data.table(sf::st_as_sf(dt1, coords = c("xcol", "ycol")), key = "idcol")
+
+  # Run the functions
+  message("Spatializing complete. Creating bursts...")
+  dt2[,`:=` (burst.st = burstFun2(geom = geometry, time = dtcol)), by = .(idcol)]
+  message("Bursts created. Selecting a point...")
+  dt2[,`:=` (sel = selFun2(oid = OID.POINT)), by = .(idcol, burst.st)]
+  dt2
+
+  # Combine with full data
+  dt3 <- merge(dt, dt2[,.(OID.POINT, burst.st, sel)], by = "OID.POINT")
+  dt3
+
+  # Remove points if requested
+  if(thin == TRUE){
+    dt4 <- dt3[sel == TRUE,]
+  }else{
+    dt4 <- dt3
+  }
+
+  # Return output and clean up
+  return(dt4)
+  rm(dt1, dt2, dt3, dt4)
+  #rm(dt, idcol, dtcol, xcol, ycol, crs, size, rate, method, thin)
+}
+
+
+#-------------------------------------------------------------------------------
+
 
