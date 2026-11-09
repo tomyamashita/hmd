@@ -73,5 +73,5 @@
 * Added documentation for the new functions and updated dependencies. 
 
 ### Version 0.0.0.14 (2026-11-09)
-* Added explicit call to rate.val in burstFun2 call of distanceThin. 
-
+* Added explicit call to size.val and rate.val in burstFun2 call of distanceThin. 
+* Added explicit call to mthd in selFun2 call of distanceThin. 
