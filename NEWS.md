@@ -75,3 +75,6 @@
 ### Version 0.0.0.14 (2026-11-09)
 * Added explicit call to size.val and rate.val in burstFun2 call of distanceThin. 
 * Added explicit call to mthd in selFun2 call of distanceThin. 
+* Fixed selFun2 to properly select an index number as TRUE for the selection function instead of selecting a group as TRUE. 
+
+

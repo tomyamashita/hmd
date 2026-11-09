@@ -467,20 +467,16 @@ selFun2 <- function(oid, mthd = method){
   # Get length of the OIDs
   n <- length(oid)
   # Select a single OID from the burst based on multiple criteria
-  if(n == 1){
-    return(TRUE)
-  }else{
-    # Create vector of logicals
-    sel <- rep(FALSE, times = n)
-    # Select a single point based on selection method
-    sel <- switch(mthd,
-                  random = sel[sample(seq_len(n), size = 1)] <- TRUE,
-                  first = sel[1] <- TRUE,
-                  last = sel[n] <- TRUE,
-                  median = sel[floor(median(seq_len(n)))] <- TRUE)
-    # Return output
-    return(sel)
-  }
+  # Create vector of logicals
+  sel <- rep(FALSE, times = n)
+  # Select a single point based on selection method
+  sel[switch(mthd,
+             random = ifelse(n == 1, 1, sample(seq_len(n), size = 1)),
+             first = 1,
+             last = n,
+             median = floor(median(seq_len(n))))] <- TRUE
+  # Return output
+  return(sel)
   # Clean up
   rm(n, sel)
   #rm(oid)
