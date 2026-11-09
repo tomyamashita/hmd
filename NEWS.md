@@ -72,3 +72,6 @@
 * Separated internal functions of distanceThin into standalone functions (Note: These may not work standalone as they are designed to work within a data.table). 
 * Added documentation for the new functions and updated dependencies. 
 
+### Version 0.0.0.14 (2026-11-09)
+* Added explicit call to rate.val in burstFun2 call of distanceThin. 
+

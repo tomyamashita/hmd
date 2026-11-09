@@ -2024,7 +2024,7 @@ distanceThin <- function(dt, idcol = "grid", dtcol = "ts_UTC", xcol = "X", ycol 
 
   # Run the functions
   message("Spatializing complete. Creating bursts...")
-  dt2[,`:=` (burst.st = burstFun2(geom = geometry, time = dtcol)), by = .(idcol)]
+  dt2[,`:=` (burst.st = burstFun2(geom = geometry, time = dtcol, size.val = size, rate.val = rate)), by = .(idcol)]
   message("Bursts created. Selecting a point...")
   dt2[,`:=` (sel = selFun2(oid = OID.POINT)), by = .(idcol, burst.st)]
   dt2
