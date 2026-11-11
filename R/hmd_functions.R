@@ -1983,7 +1983,7 @@ thinHMD <- function(x, idcol, dtcol, rate = lubridate::seconds(30), tolerance = 
 ##' @examples \dontrun{
 ##' ## No example right now
 ##' }
-distanceThin <- function(dt, idcol = "grid", dtcol = "ts_UTC", xcol = "X", ycol = "Y", size, rate, method = "random", thin = TRUE){
+distanceThin <- function(dt, idcol = "grid", dtcol = "ts_UTC", xcol = "X", ycol = "Y", size, rate, seed = 123, method = "random", thin = TRUE){
   #hmd1 <- fs::dir_ls(file.path("data_HMD_v3", "classify"), type = 'file')
   #dt <- data.table::as.data.table(readRDS(hmd1[36]))
   #idcol <- "grid"
@@ -2026,7 +2026,7 @@ distanceThin <- function(dt, idcol = "grid", dtcol = "ts_UTC", xcol = "X", ycol 
   message("Spatializing complete. Creating bursts...")
   dt2[,`:=` (burst.st = burstFun2(geom = geometry, time = dtcol, size.val = size, rate.val = rate)), by = .(idcol)]
   message("Bursts created. Selecting a point...")
-  dt2[,`:=` (sel = selFun2(oid = OID.POINT, mthd = method)), by = .(idcol, burst.st)]
+  dt2[,`:=` (sel = selFun2(oid = OID.POINT, mthd = method, seed = seed)), by = .(idcol, burst.st)]
   dt2
 
   # Combine with full data

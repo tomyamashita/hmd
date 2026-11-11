@@ -77,4 +77,6 @@
 * Added explicit call to mthd in selFun2 call of distanceThin. 
 * Fixed selFun2 to properly select an index number as TRUE for the selection function instead of selecting a group as TRUE. 
 
-
+### Version 0.0.0.15 (2026-11-11)
+* Added option to select a seed for the randomization process of distanceThin. 
+Hopefully that fixes issues with the number of samples chosen in the classification process. 

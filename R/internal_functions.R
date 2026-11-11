@@ -463,13 +463,14 @@ burstFun2 <- function(geom, time, size.val = size, rate.val = rate) {
 ##' @examples \dontrun{
 ##' ## No example right now
 ##' }
-selFun2 <- function(oid, mthd = method){
+selFun2 <- function(oid, mthd = method, seed = seed){
   # Get length of the OIDs
   n <- length(oid)
   # Select a single OID from the burst based on multiple criteria
   # Create vector of logicals
   sel <- rep(FALSE, times = n)
   # Select a single point based on selection method
+  set.seed <- seed
   sel[switch(mthd,
              random = ifelse(n == 1, 1, sample(seq_len(n), size = 1)),
              first = 1,
