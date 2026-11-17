@@ -12,6 +12,7 @@ distanceThin(
   ycol = "Y",
   size,
   rate,
+  seed = 123,
   method = "random",
   thin = TRUE
 )

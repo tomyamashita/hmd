@@ -1132,7 +1132,11 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
               arg.col <- n.col
             }
             DT1 <- switch(arg.col,
+                          "dist_ntd_local" = dist_ntd_local[,.(dist_ntd_local)],
+                          "dist_usfs_local" = dist_usfs_local[,.(dist_usfs_local)],
                           "dist_local" = data.table::data.table(dist_ntd_local[,.(dist_ntd_local)], dist_usfs_local[,.(dist_usfs_local)]),
+                          "dist_ntd_trail" = dist_ntd_trail[,.(dist_ntd_trail)],
+                          "dist_usfs_trail" = dist_usfs_trail[,.(dist_usfs_trail)],
                           "dist_trail" = data.table::data.table(dist_ntd_trail[,.(dist_ntd_trail)], dist_usfs_trail[,.(dist_usfs_trail)]))
           }else{
             n.col <- paste("dist_", n, sep = "")
@@ -1144,7 +1148,7 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
                        "dist_railr" = units::drop_units(dist_rail[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
                        "dist_local" = units::drop_units(DT1[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
                        "dist_trail" = units::drop_units(DT1[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]))
-          in.th <- d1[,lapply(.SD, function(x){ifelse(is.na(x <= th), FALSE, x <= th)}), .SDcols = "DIST"]
+          in.th <- d1[,lapply(.SD, function(x){data.table::fifelse(is.na(x <= th), FALSE, x <= th)}), .SDcols = "DIST"]
           colnames(in.th) <- n
           return(in.th)
           rm(n, th, n.col, arg.col, in.th, DT1, d1)
@@ -1152,7 +1156,10 @@ classifyHMD <- function(in.dir, out.dir, studyarea, coord.sys, data.dir, ths, ro
         }))
 
         ## Categorize based on which infrastructure is close
-        h7[,`:=` (hmd.type = apply(hmd_ths, 1, function(x){if(any(x == TRUE)){colnames(hmd_ths)[min(which(x == TRUE))]}else{"dispersed"}}))]
+        type1 <- colnames(hmd_ths)[apply(hmd_ths, 1, function(x){match(TRUE, x)})]
+        type1 <- data.table::fifelse(is.na(type1), "dispersed", type1)
+
+        h7[,`:=` (hmd.type = type1)]
         #h7[1:5,]
 
         # Additional spatial calculations
@@ -2044,6 +2051,110 @@ distanceThin <- function(dt, idcol = "grid", dtcol = "ts_UTC", xcol = "X", ycol 
   return(dt4)
   rm(dt1, dt2, dt3, dt4)
   #rm(dt, idcol, dtcol, xcol, ycol, crs, size, rate, method, thin)
+}
+
+
+#-------------------------------------------------------------------------------
+
+# Reclassify hmd.type based on new thresholds (Added 2026-11-17) ####
+##' @description Reclassify hmd.type using updated thresholds
+##'
+##' @title Reclassify hmd.type
+##'
+##' @param hmd data.table. The classified data.table with all distance metrics calculated.
+##' @inheritParams classifyHMD ths road.source
+##'
+##' @details This function uses new distance thresholds to classify HMD into types.
+##' This allows for updating thresholds without having to rerun \code{\link{classifyHMD}}.
+##'
+##' Note that this function returns a vector not an updated data.table because for
+##' some reason, in testing, the function kept overwriting the input data.table as well as creating a new one.
+##'
+##' @returns character vector with updated classifications.
+##'
+##' @references \code{\link{classifyHMD}}
+##'
+##' @inheritSection flagAssignment {Disclaimer}
+##'
+##' @importFrom units as_units drop_units
+##' @importFrom data.table fcase fifelse cbindlist data.table
+##' @importFrom matrixStats rowMins
+##'
+##' @keywords manip
+##'
+##' @concept hmd
+##' @concept classification
+##'
+##' @export
+##'
+##' @examples \dontrun{
+##' ## No example right now
+##' }
+reclassifyType <- function(hmd, ths, road.source){
+  # Define distance thresholds
+  th.types <- c("bldg", "main", "railr", "local", "trail")
+  thresholds <- lapply(th.types, function(x){
+    if(any(grepl(x, names(ths)))){
+      units::as_units(ths[[x]], "meter")
+      #assign(paste(x, "th", sep = "."), ths[[x]])
+    }else{
+      message("No ", x, " threshold found. Will calculate distance to ", x, " but not include it in classification.")
+      units::as_units(NULL, "meter")
+    }
+  })
+  names(thresholds) <- th.types
+  message("Function will use ", paste(names(thresholds)[!sapply(thresholds,is.null)], collapse = ", "), " to classify HMD.")
+
+  # Confirm road sources
+  use.source <- data.table::fcase(all(sapply(c("NTD", "USFS"), function(x){any(grepl(x, road.source))})), "both",
+                                  any(grepl("USFS", road.source)), "usfs",
+                                  any(grepl("NTD", road.source)), "ntd",
+                                  default = NA)
+  stopifnot(!is.na(use.source))
+
+  # Calculate hmd.type
+  hmd_ths <- data.table::cbindlist(lapply(1:length(thresholds), function(j){
+    n <- names(thresholds)[j]
+    th <- ifelse(is.null(thresholds[[j]]), NA, units::drop_units(thresholds[[j]]))
+    if(n %in% c("local", "trail")){
+      if(use.source == "both"){
+        n.col <- paste("dist_", c("ntd", "usfs"), "_", n, sep = "")
+        arg.col <- paste("dist_", n, sep = "")
+      }else{
+        n.col <- paste("dist_", use.source, "_", n, sep = "")
+        arg.col <- n.col
+      }
+      DT1 <- switch(arg.col,
+                    "dist_ntd_local" = hmd[,.(dist_ntd_local)],
+                    "dist_usfs_local" = hmd[,.(dist_usfs_local)],
+                    "dist_local" = data.table::data.table(hmd[,.(dist_ntd_local)], hmd[,.(dist_usfs_local)]),
+                    "dist_ntd_trail" = hmd[,.(dist_ntd_trail)],
+                    "dist_usfs_trail" = hmd[,.(dist_usfs_trail)],
+                    "dist_trail" = data.table::data.table(hmd[,.(dist_ntd_trail)], hmd[,.(dist_usfs_trail)]))
+    }else{
+      n.col <- paste("dist_", n, sep = "")
+      arg.col <- n.col
+    }
+    d1 <- switch(arg.col,
+                 "dist_bldg" = units::drop_units(hmd[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
+                 "dist_main" = units::drop_units(hmd[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
+                 "dist_railr" = units::drop_units(hmd[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
+                 "dist_local" = units::drop_units(DT1[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]),
+                 "dist_trail" = units::drop_units(DT1[,.(DIST = matrixStats::rowMins(as.matrix(.SD))), .SDcols = n.col]))
+    in.th <- d1[,lapply(.SD, function(x){data.table::fifelse(is.na(x <= th), FALSE, x <= th)}), .SDcols = "DIST"]
+    colnames(in.th) <- n
+    return(in.th)
+    rm(n, th, n.col, arg.col, in.th, DT1, d1)
+    #rm(j)
+  }))
+
+  ## Categorize based on which infrastructure is close
+  type1 <- colnames(hmd_ths)[apply(hmd_ths, 1, function(x){match(TRUE, x)})]
+  type1 <- data.table::fifelse(is.na(type1), "dispersed", type1)
+
+  return(type1)
+  rm(th.types, thresholds, use.source, hmd_ths, type1)
+  #rm(hmd, ths, road.source)
 }
 
 

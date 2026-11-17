@@ -4,7 +4,7 @@
 \alias{selFun2}
 \title{(Internal) Select a row from a burst}
 \usage{
-selFun2(oid, mthd = method)
+selFun2(oid, mthd = method, seed = seed)
 }
 \arguments{
 \item{oid.}{character. Column name identifying the OID.POINT column}

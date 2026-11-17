@@ -80,3 +80,8 @@
 ### Version 0.0.0.15 (2026-11-11)
 * Added option to select a seed for the randomization process of distanceThin. 
 Hopefully that fixes issues with the number of samples chosen in the classification process. 
+
+### Version 0.0.0.16 (2026-11-17)
+* Added the reclassifyType function to classify the HMD after classification has already been run. 
+* Updated classifyHMD with improvements made during development of reclassifyType function. 
+
