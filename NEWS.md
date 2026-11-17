@@ -84,4 +84,4 @@ Hopefully that fixes issues with the number of samples chosen in the classificat
 ### Version 0.0.0.16 (2026-11-17)
 * Added the reclassifyType function to classify the HMD after classification has already been run. 
 * Updated classifyHMD with improvements made during development of reclassifyType function. 
-
+* Fix a bug for distanceThin so it properly sets the seed for the randomization process. 

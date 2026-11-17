@@ -470,7 +470,7 @@ selFun2 <- function(oid, mthd = method, seed = seed){
   # Create vector of logicals
   sel <- rep(FALSE, times = n)
   # Select a single point based on selection method
-  set.seed <- seed
+  set.seed(seed)
   sel[switch(mthd,
              random = ifelse(n == 1, 1, sample(seq_len(n), size = 1)),
              first = 1,
